@@ -3,7 +3,6 @@ import { join } from "node:path";
 import { generateId } from "@hermes-os/shared";
 import type { BrowserPage, BrowserSession } from "./types.js";
 import { BrowserControlError } from "./errors.js";
-
 type PlaywrightPage = {
   goto: (url: string, opts?: { waitUntil?: string; timeout?: number }) => Promise<unknown>;
   url: () => string;
