@@ -1,0 +1,147 @@
+default: deny_if_unknown
+
+tools:
+  screen.observe:
+    risk: read
+    approval: false
+  gmail.read:
+    risk: read
+    approval: false
+  gmail.draft:
+    risk: low
+    approval: false
+  gmail.send:
+    risk: high
+    approval: always
+  imessage.send:
+    risk: high
+    approval: always
+  calendar.read:
+    risk: read
+    approval: false
+  calendar.create:
+    risk: medium
+    approval: true
+  calendar.update:
+    risk: medium
+    approval: true
+  browser.goto:
+    risk: low
+    approval: false
+  browser.open:
+    risk: low
+    approval: false
+  browser.observe:
+    risk: read
+    approval: false
+  browser.fill:
+    risk: medium
+    approval: false
+  browser.press:
+    risk: dynamic
+    approval: if_semantic_risk
+  browser.extract:
+    risk: read
+    approval: false
+  browser.run_script:
+    risk: medium
+    approval: true
+  browser.screenshot_fallback:
+    risk: read
+    approval: false
+  browser.ai_observe:
+    risk: read
+    approval: false
+  browser.ai_act:
+    risk: dynamic
+    approval: if_semantic_risk
+  browser.ai_extract:
+    risk: read
+    approval: false
+  gmail.check_inbox:
+    risk: read
+    approval: false
+  gmail.search:
+    risk: read
+    approval: false
+  gmail.summarize_threads:
+    risk: read
+    approval: false
+  gmail.extract_open_loops:
+    risk: read
+    approval: false
+  gmail.send_draft:
+    risk: high
+    approval: always
+  browser.fill_credentials:
+    risk: high
+    approval: false
+  browser.click:
+    risk: dynamic
+    approval: if_semantic_risk
+  browser.submit:
+    risk: high
+    approval: always
+  social.post:
+    risk: high
+    approval: always
+  filesystem.read:
+    risk: read
+    approval: false
+  filesystem.write:
+    risk: medium
+    approval: true
+  tools.define:
+    risk: medium
+    approval: true
+  tools.author:
+    risk: medium
+    approval: true
+  tools.run:
+    risk: dynamic
+    approval: if_destructive
+  filesystem.delete:
+    risk: high
+    approval: always
+  terminal.run:
+    risk: dynamic
+    approval: if_destructive
+  payments.submit:
+    risk: high
+    approval: always
+  code.self_edit:
+    risk: high
+    approval: always
+  code.propose_patch:
+    risk: low
+    approval: false
+  code.apply_patch_after_approval:
+    risk: high
+    approval: always
+  code.run_tests:
+    risk: low
+    approval: false
+  code.rollback:
+    risk: high
+    approval: always
+  memory.remember:
+    risk: low
+    approval: false
+  memory.forget:
+    risk: low
+    approval: false
+  memory.search:
+    risk: read
+    approval: false
+  web.fetch:
+    risk: low
+    approval: false
+
+blocked:
+  - disable_approval_broker
+  - self_modify_policy
+  - exfiltrate_credentials
+  - send_secrets_to_external_domain
+  - permanent_delete_without_trash
+  - grant_self_permissions
+  - bypass_user_approval

@@ -1,0 +1,24 @@
+# Phase 4 — memory storage rules
+store:
+  - durable_facts
+  - preferences
+  - project_context
+  - writing_style
+  - workflows
+  - relationship_context
+
+do_not_store:
+  - random_trivia
+  - secrets
+  - full_credentials
+  - sensitive_private_data_unless_explicitly_approved
+
+required_fields:
+  - content
+  - memory_type
+  - source
+  - source_id
+  - confidence
+  - scope
+  - evidence
+  - expiry

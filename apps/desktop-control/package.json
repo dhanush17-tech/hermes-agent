@@ -1,0 +1,10 @@
+{
+  "name": "@hermes-os/desktop-control",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Deferred — see phase roadmap in docs/ARCHITECTURE.md",
+  "scripts": {
+    "build": "node -e \"\"",
+    "test": "node -e \"\""
+  }
+}

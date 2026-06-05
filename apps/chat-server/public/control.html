@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Hermes Control Center</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <div class="app control-app">
+      <header class="header">
+        <div class="brand">
+          <span class="logo">◈</span>
+          <div>
+            <h1>Hermes Control</h1>
+            <p class="subtitle"><a href="/">← Chat</a></p>
+          </div>
+        </div>
+      </header>
+      <nav class="control-nav">
+        <button type="button" data-panel="approvals" class="active">Approvals</button>
+        <button type="button" data-panel="risks">Risks</button>
+        <button type="button" data-panel="open-loops">Open loops</button>
+        <button type="button" data-panel="memories">Memory</button>
+        <button type="button" data-panel="people">People</button>
+        <button type="button" data-panel="projects">Projects</button>
+        <button type="button" data-panel="logs">Logs</button>
+      </nav>
+      <main class="control-main">
+        <pre id="panel" class="control-panel">Loading…</pre>
+      </main>
+    </div>
+    <script src="/control.js" type="module"></script>
+  </body>
+</html>

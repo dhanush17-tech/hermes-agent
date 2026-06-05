@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Hermes Chat</title>
+    <link rel="stylesheet" href="/styles.css" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&family=JetBrains+Mono:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+  </head>
+  <body>
+    <div class="app">
+      <header class="header">
+        <div class="brand">
+          <span class="logo">◈</span>
+          <div>
+            <h1>Hermes</h1>
+            <p class="subtitle">Personal OS · <a href="/control.html">Control center</a></p>
+          </div>
+        </div>
+        <div class="status-pill" id="status-pill">
+          <span class="dot"></span>
+          <span id="status-text">Connecting…</span>
+        </div>
+      </header>
+
+      <main class="main">
+        <section class="chat-panel">
+          <div class="messages" id="messages">
+            <div class="system-msg">
+              Send a message to start. While the agent is working on a task, send a
+              <strong>related</strong> message to steer it (pauses planning, keeps tabs open, replans from
+              where it left off). Unrelated messages run as a separate task in parallel.
+            </div>
+          </div>
+          <form class="composer" id="composer">
+            <textarea
+              id="input"
+              rows="2"
+              placeholder="Ask Hermes anything… (Enter to send, Shift+Enter for newline)"
+              autofocus
+            ></textarea>
+            <div class="composer-actions">
+              <button type="button" class="btn-ghost" id="interrupt-btn" disabled title="Stop current run">
+                Stop
+              </button>
+              <button type="submit" class="btn-primary" id="send-btn">Send</button>
+            </div>
+          </form>
+        </section>
+
+        <aside class="activity-panel">
+          <div class="activity-header">
+            <h2>Agent activity</h2>
+            <button type="button" class="btn-ghost btn-sm" id="clear-activity">Clear</button>
+          </div>
+          <div class="activity-stream" id="activity"></div>
+        </aside>
+      </main>
+    </div>
+    <script src="/app.js" type="module"></script>
+  </body>
+</html>

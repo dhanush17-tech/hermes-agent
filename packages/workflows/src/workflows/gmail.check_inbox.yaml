@@ -1,0 +1,14 @@
+id: gmail.check_inbox
+description: Check inbox via Gmail API
+inputs:
+  accountId: default
+  query: "newer_than:3d"
+steps:
+  - id: search
+    tool: gmail.search
+    args:
+      query: "newer_than:3d"
+  - id: summarize
+    tool: gmail.summarize_threads
+  - id: loops
+    tool: gmail.extract_open_loops

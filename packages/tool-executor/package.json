@@ -1,0 +1,39 @@
+{
+  "name": "@hermes-os/tool-executor",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "test": "vitest run",
+    "lint": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@hermes-os/approval-broker": "workspace:*",
+    "@hermes-os/audit-log": "workspace:*",
+    "@hermes-os/memory": "workspace:*",
+    "@hermes-os/policies": "workspace:*",
+    "@hermes-os/shared": "workspace:*",
+    "@hermes-os/code-tools": "workspace:*",
+    "@hermes-os/browser-workbench": "workspace:*",
+    "@hermes-os/browser-control": "workspace:*",
+    "@hermes-os/connectors": "workspace:*"
+  },
+  "devDependencies": {
+    "@hermes-os/approval-broker": "workspace:*",
+    "@hermes-os/audit-log": "workspace:*",
+    "@hermes-os/context-graph": "workspace:*",
+    "@hermes-os/policies": "workspace:*",
+    "@types/node": "^22.10.2",
+    "typescript": "^5.7.2",
+    "vitest": "^2.1.8"
+  }
+}

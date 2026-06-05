@@ -1,0 +1,16 @@
+node_modules/
+dist/
+.turbo/
+data/*.sqlite
+data/*.sqlite-journal
+data/*.sqlite-wal
+data/*.sqlite-shm
+data/*.jsonl
+data/outbox/
+data/skill-candidates/
+data/pending-edits/
+data/custom-tools/
+.env
+.DS_Store
+coverage/
+*.log

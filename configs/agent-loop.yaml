@@ -1,0 +1,5 @@
+# Autonomous loop: think → tool → observe → replan → code fix → ask user if blocked
+max_steps: 12
+replan_on_failure: true
+auto_observe_after_browser: true
+allow_self_edit_when_stuck: true

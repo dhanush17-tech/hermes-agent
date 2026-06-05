@@ -1,0 +1,26 @@
+# Phase 6 — proactive notification thresholds
+immediate_score_min: 70
+daily_brief_score_min: 40
+silent_below: 40
+
+may_notify_when:
+  - important_item_likely_missed
+  - deadline_within_72_hours
+  - important_person_waiting
+  - reputation_facing_error
+  - high_leverage_opportunity
+  - calendar_routine_conflict
+  - prepared_work_available
+
+must_not_notify_when:
+  - generic_productivity_advice
+  - low_importance_email
+  - random_news
+  - obvious_known_facts
+  - repeated_after_two_ignores
+  - suggestion_without_prepared_work
+
+scoring:
+  formula: "impact * urgency * confidence - annoyancePenalty"
+  scale_min: 0
+  scale_max: 10

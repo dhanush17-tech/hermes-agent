@@ -1,0 +1,86 @@
+{
+  "name": "hermes-personal-os",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Local-first proactive personal assistant — monolithic runtime",
+  "type": "module",
+  "bin": {
+    "hermes": "./dist/src/main.js"
+  },
+  "imports": {
+    "@hermes-os/shared": "./packages/shared/dist/index.js",
+    "@hermes-os/policies": "./packages/policies/dist/index.js",
+    "@hermes-os/context-graph": "./packages/context-graph/dist/index.js",
+    "@hermes-os/audit-log": "./packages/audit-log/dist/index.js",
+    "@hermes-os/approval-broker": "./packages/approval-broker/dist/index.js",
+    "@hermes-os/notification-center": "./packages/notification-center/dist/index.js",
+    "@hermes-os/memory": "./packages/memory/dist/index.js",
+    "@hermes-os/risk-engine": "./packages/risk-engine/dist/index.js",
+    "@hermes-os/connectors": "./packages/connectors/dist/index.js",
+    "@hermes-os/research": "./packages/research/dist/index.js",
+    "@hermes-os/agent-runtime": "./packages/agent-runtime/dist/index.js",
+    "@hermes-os/code-tools": "./packages/code-tools/dist/index.js",
+    "@hermes-os/browser-workbench": "./packages/browser-workbench/dist/index.js",
+    "@hermes-os/browser-control": "./packages/browser-control/dist/index.js",
+    "@hermes-os/workflows": "./packages/workflows/dist/index.js",
+    "@hermes-os/tool-executor": "./packages/tool-executor/dist/index.js",
+    "@hermes-os/orchestrator": "./apps/orchestrator/dist/index.js",
+    "@hermes-os/orchestrator/system": "./apps/orchestrator/dist/system.js",
+    "@hermes-os/orchestrator/proactive-scheduler": "./apps/orchestrator/dist/proactive-scheduler.js",
+    "@hermes-os/daemon": "./apps/daemon/dist/lib.js",
+    "@hermes-os/chat-server": "./apps/chat-server/dist/server.js",
+    "@hermes-os/imessage-bridge": "./apps/imessage-bridge/dist/bridge.js"
+  },
+  "scripts": {
+    "preinstall": "node scripts/check-node.mjs && node scripts/enforce-pnpm.mjs",
+    "postinstall": "node scripts/rebuild-native.mjs",
+    "build": "node scripts/build-all.mjs",
+    "start": "node dist/src/main.js start",
+    "dev": "node --watch dist/src/main.js start",
+    "chat": "node dist/src/main.js chat",
+    "imessage": "node dist/src/main.js imessage",
+    "daemon": "node dist/src/main.js start",
+    "health": "curl -s http://127.0.0.1:3850/health",
+    "google:oauth": "node scripts/google-oauth.mjs",
+    "logs": "node scripts/tail-logs.mjs",
+    "test": "node scripts/test-all.mjs"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "packageManager": "pnpm@9.15.9",
+  "pnpm": {
+    "overrides": {
+      "typescript": "5.7.2",
+      "esbuild": "0.21.5"
+    },
+    "onlyBuiltDependencies": [
+      "better-sqlite3"
+    ]
+  },
+  "dependencies": {
+    "@hermes-os/chat-server": "workspace:*",
+    "@hermes-os/daemon": "workspace:*",
+    "@hermes-os/imessage-bridge": "workspace:*",
+    "@hermes-os/orchestrator": "workspace:*",
+    "@hermes-os/agent-runtime": "workspace:*",
+    "@hermes-os/shared": "workspace:*",
+    "better-sqlite3": "^11.7.0",
+    "drizzle-orm": "^0.38.3",
+    "playwright": "^1.49.1",
+    "ws": "^8.18.0",
+    "yaml": "^2.9.0",
+    "zod": "^3.24.1"
+  },
+  "optionalDependencies": {
+    "@browserbasehq/stagehand": "^2.5.0"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^7.6.12",
+    "@types/node": "^22.10.2",
+    "@types/ws": "^8.5.13",
+    "turbo": "^2.3.3",
+    "typescript": "5.7.2",
+    "vitest": "^2.1.8"
+  }
+}

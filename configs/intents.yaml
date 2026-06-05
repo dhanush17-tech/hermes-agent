@@ -1,0 +1,60 @@
+# Intent catalog for LLM routing (descriptions only — no keyword matching).
+classifier_model: "@cf/meta/llama-3.2-3b-instruct"
+
+intents:
+  - id: research
+    description: >
+      Questions, explanations, comparisons, shopping or product recommendations,
+      follow-ups in an ongoing Q&A thread, requests for links or "best" picks.
+    implemented: true
+
+  - id: approval_response
+    description: >
+      User approves, denies, or edits a pending gated action (needs approval id when known).
+    implemented: true
+
+  - id: status
+    description: >
+      Assistant meta-control — status overview, pause, resume, emergency stop,
+      end/cancel an open research conversation.
+    implemented: true
+
+  - id: laptop_control
+    description: >
+      Anything involving a third-party service, website, or app (Gmail, calendar, Amazon,
+      Slack, banking, etc.). Uses Mac screen capture and opening URLs in Arc locally.
+      Use social.post ONLY when the user explicitly asks to tweet/post on X/Twitter.
+    implemented: true
+
+  - id: coding
+    description: >
+      Change or inspect the Personal OS / Hermes codebase, refactors, debugging code,
+      implement features, or author new tools/macros (multi-step planner + code.self_edit).
+    implemented: true
+
+  - id: writing
+    description: >
+      Draft or send messages, emails, copy — especially iMessage (send requires approval).
+    implemented: true
+
+  - id: browser_task
+    description: >
+      Browse or read a web page; prefer laptop_control (open URL + screen) unless user
+      explicitly wants headless fetch only.
+    implemented: true
+
+  - id: personal_ops
+    description: >
+      Internal brief from stored tasks and open loops only — not Gmail/calendar APIs.
+      If the user mentions an external service, use laptop_control instead.
+    implemented: true
+
+  - id: memory_update
+    description: >
+      Remember, forget, or search long-term user memory.
+    implemented: true
+
+  - id: unknown
+    description: >
+      None of the above; general conversation with memory context.
+    implemented: true

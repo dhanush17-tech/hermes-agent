@@ -1,0 +1,30 @@
+{
+  "name": "@hermes-os/daemon",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./dist/lib.js",
+    "./daemon": "./dist/daemon.js"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "start": "node dist/index.js",
+    "dev": "node --watch dist/index.js",
+    "lint": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@hermes-os/chat-server": "workspace:*",
+    "@hermes-os/context-graph": "workspace:*",
+    "@hermes-os/imessage-bridge": "workspace:*",
+    "@hermes-os/notification-center": "workspace:*",
+    "@hermes-os/orchestrator": "workspace:*",
+    "@hermes-os/policies": "workspace:*",
+    "@hermes-os/shared": "workspace:*",
+    "@hermes-os/tool-executor": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.2",
+    "typescript": "^5.7.2"
+  }
+}

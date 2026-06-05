@@ -1,0 +1,15 @@
+# When Hermes may act without an explicit user message (observe broadly, act narrowly).
+enabled: true
+
+# Rotate Gmail / X / LinkedIn / Calendar via Arc on proactive ticks.
+# Off by default — opens Arc on daemon ticks. Set HERMES_ENABLE_PRESENCE_SCAN=1 to opt in.
+proactive_presence_scan: false
+
+# After proactive risk scan, optionally run one autonomous exploration step
+proactive_explore: false
+
+# Message user and wait when stuck (login, CAPTCHA, ambiguous UI)
+notify_user_when_blocked: true
+
+# code.self_edit / tools.author when tools fail repeatedly
+allow_self_edit_when_stuck: true
