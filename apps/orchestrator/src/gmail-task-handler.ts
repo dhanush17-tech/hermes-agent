@@ -9,7 +9,8 @@ import {
 } from "@hermes-os/connectors";
 import type { ToolContext } from "@hermes-os/shared";
 import type { ToolExecutor } from "@hermes-os/tool-executor";
-import { formatGmailWorkflowReply, runWorkflow } from "./workflow-runner.js";
+import { formatGmailWorkflowReply } from "./workflow-runner.js";
+import { runWorkflowWithExecutor } from "@hermes-os/workflows";
 
 export { isGmailCheckIntent, wantsBrowserGmail };
 
@@ -32,10 +33,15 @@ export async function tryHandleGmailTask(
     }
 
     if (executor && ctx) {
-      const { outputs, failed } = await runWorkflow("gmail.check_inbox", executor, ctx, {
-        accountId: account.id,
-        query: "newer_than:3d",
-      });
+      const { outputs, failed } = await runWorkflowWithExecutor(
+        "gmail.check_inbox",
+        {
+          invoke: (tool, payload, toolCtx) =>
+            executor.invoke(tool, payload, toolCtx, { summary: `workflow:gmail.check_inbox:${tool}` }),
+        },
+        ctx,
+        { accountId: account.id, query: "newer_than:3d" },
+      );
       if (!failed) {
         return formatGmailWorkflowReply(outputs, account.email);
       }

@@ -1,6 +1,6 @@
 import { setTimeout as delay } from "node:timers/promises";
 import { generateId } from "@hermes-os/shared";
-import type { CloudflareWorkersAIClient, IntentEntities, ToolContext } from "@hermes-os/shared";
+import type { IntentEntities, ToolContext } from "@hermes-os/shared";
 import type { ToolExecutor } from "@hermes-os/tool-executor";
 import { wantsExplicitTweet } from "@hermes-os/shared";
 import {
@@ -13,6 +13,8 @@ import {
   analyzeScreenForLogin,
 } from "@hermes-os/tool-executor";
 import { LoginSessionStore, type PendingLoginSession } from "./login-session-store.js";
+import { isLoginResumeMessage, loginResumeInstructions } from "./login-resume.js";
+import { isLoginSessionExpired, messageRelatesToPendingLogin } from "./login-session-utils.js";
 
 const NAV_SETTLE_MS = process.env.VITEST === "true" ? 0 : 2800;
 const SKIP_LOGIN_DETECT =
@@ -23,53 +25,38 @@ export class LaptopControlAgent {
 
   constructor(
     private readonly executor: ToolExecutor,
-    private readonly cf: CloudflareWorkersAIClient | null,
     workspaceRoot: string,
   ) {
     this.sessions = new LoginSessionStore(workspaceRoot);
   }
 
   /** Resume after user sends credentials (orchestrator calls before intent routing). */
-  async tryHandleCredentialReply(text: string, ctx: ToolContext): Promise<string | null> {
+  async tryHandleCredentialReply(text: string, _ctx: ToolContext): Promise<string | null> {
     const session = await this.sessions.get();
     if (!session) return null;
 
+    if (isLoginSessionExpired(session)) {
+      await this.sessions.clear();
+      return null;
+    }
+
+    if (isLoginResumeMessage(text)) {
+      return null;
+    }
+
+    if (!messageRelatesToPendingLogin(text, session)) {
+      await this.sessions.clear();
+      return null;
+    }
+
     if (!looksLikeCredentialReply(text)) {
-      return [
-        `Paused: ${session.service} in Arc needs sign-in.`,
-        `Reply with credentials, for example:`,
-        `username: you@example.com`,
-        `password: your-password`,
-        `(Or one line: you@example.com / your-password)`,
-      ].join("\n");
+      return loginResumeInstructions(session.email ?? session.service, session.browser ?? "arc");
     }
 
-    const creds = parseCredentials(text);
-    if (!creds) {
-      return "Could not parse credentials. Use username: … and password: … on separate lines.";
-    }
-
-    const fill = await this.invokeTool(
-      "browser.fill_credentials",
-      {
-        username: creds.username,
-        password: creds.password,
-        app: getDefaultBrowserApp(),
-        flow: "multi_step",
-      },
-      ctx,
-      `Sign in to ${session.service} in Arc`,
-    );
-    if (fill.pending) return fill.pending;
-    if (fill.denied) return `Could not fill login in Arc: ${fill.denied}`;
-
-    await this.sessions.clear();
-    await delay(NAV_SETTLE_MS);
-
-    return this.run(session.originalText, session.entities, ctx, {
-      preferCompose: session.preferCompose,
-      skipLoginPause: true,
-    });
+    return [
+      "I can't use passwords pasted into normal chat.",
+      "Sign in manually in Arc, then reply **done**.",
+    ].join("\n");
   }
 
   async run(
@@ -110,12 +97,13 @@ export class LaptopControlAgent {
 
         const capturePath = afterNav.path ?? before.path;
         if (capturePath) {
-          const login = await analyzeScreenForLogin(capturePath, url, this.cf);
+          const login = await analyzeScreenForLogin(capturePath, url);
           if (login.loginRequired) {
             const service = login.service ?? this.inferServiceLabel(url);
             const session: PendingLoginSession = {
               id: generateId("login"),
               service,
+              browser: "arc",
               url,
               originalText: text,
               entities,
@@ -151,16 +139,6 @@ export class LaptopControlAgent {
       );
       if (post.pending) return post.pending;
       if (post.data) parts.push(`Post step: ${JSON.stringify(post.data)}`);
-    }
-
-    if (this.cf && (before.path || after.path)) {
-      const hint = await this.cf.chat(text, {
-        maxTokens: 400,
-        classification: "laptop_control",
-        system:
-          "User tasks use Arc browser and screen capture on their Mac. Give 2-4 short next steps (what to verify or click). Do not ask for API keys.",
-      });
-      parts.push("\n## Next steps\n", hint);
     }
 
     return parts.join("\n");

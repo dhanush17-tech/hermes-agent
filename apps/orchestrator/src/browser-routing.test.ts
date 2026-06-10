@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { wantsBrowserControlledService } from "./orchestrator.ts";
+import { wantsBrowserControlledService } from "./routing-helpers.js";
 
 describe("browser-controlled service routing", () => {
   it("detects explicit browser Gmail requests", () => {

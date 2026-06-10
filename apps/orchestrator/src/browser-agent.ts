@@ -1,4 +1,4 @@
-import type { CloudflareWorkersAIClient, IntentEntities, ToolContext } from "@hermes-os/shared";
+import type { IntentEntities, ToolContext } from "@hermes-os/shared";
 import type { ToolExecutor } from "@hermes-os/tool-executor";
 import { LaptopControlAgent } from "./laptop-control-agent.js";
 
@@ -8,16 +8,13 @@ export class BrowserAgent {
 
   constructor(
     executor: ToolExecutor,
-    cf: CloudflareWorkersAIClient | null,
     workspaceRoot: string,
   ) {
-    this.laptop = new LaptopControlAgent(executor, cf, workspaceRoot);
+    this.laptop = new LaptopControlAgent(executor, workspaceRoot);
     this.executor = executor;
-    this.cf = cf;
   }
 
   private readonly executor: ToolExecutor;
-  private readonly cf: CloudflareWorkersAIClient | null;
 
   async run(text: string, entities: IntentEntities | undefined, ctx: ToolContext): Promise<string> {
     const url = entities?.url ?? null;
@@ -34,13 +31,6 @@ export class BrowserAgent {
 
     const data = result.data as { content?: string; status?: number };
     const snippet = (data.content ?? "").slice(0, 4000);
-    if (!this.cf) {
-      return `Fetched ${url} (HTTP ${data.status}).\n\n${snippet.slice(0, 1500)}`;
-    }
-    const summary = await this.cf.chat(
-      `Summarize this page for the user request: ${text}\n\nContent:\n${snippet}`,
-      { maxTokens: 1024, system: "Summarize key facts and answer the user's intent." },
-    );
-    return `## ${url}\n\n${summary}`;
+    return `Fetched ${url} (HTTP ${data.status}).\n\n${snippet.slice(0, 1500)}`;
   }
 }

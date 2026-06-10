@@ -1,11 +1,16 @@
+import { llmCall, MODEL_ROUTING } from "@hermes-os/llm-client";
 import {
   RESEARCH_SECTION_HEADERS,
   withAssistantPolicy,
-  type CloudflareWorkersAIClient,
+  looksLikeLeakedReasoning,
 } from "@hermes-os/shared";
 import type { ResearchBundle, ResearchRunOptions, ResearchRunPlan } from "./types.js";
 import { formatResearchRunPlan } from "./research-planner.js";
-import { buildCitations, formatEvidenceForPrompt } from "./citation-builder.js";
+import { formatEvidenceForPrompt } from "./citation-builder.js";
+import {
+  formatShoppingResearchFallback,
+  isEmptyResearchAnswer,
+} from "./shopping-fallback.js";
 
 export type SynthesisInput = {
   plan: ResearchRunPlan;
@@ -15,20 +20,37 @@ export type SynthesisInput = {
   options?: ResearchRunOptions;
 };
 
-export class SynthesisEngine {
-  constructor(private readonly cf: CloudflareWorkersAIClient) {}
+function isShoppingQuery(text: string): boolean {
+  return /\b(buy|best|recommend|cheap|deal|sale|price|product|amazon|shopping|link|url)\b/i.test(text);
+}
 
+export class SynthesisEngine {
   async synthesize(input: SynthesisInput): Promise<string> {
     const { plan, bundle, memoryContext, userQuery, options } = input;
-    const sections = RESEARCH_SECTION_HEADERS.join(", ");
+    const shopping = isShoppingQuery(userQuery);
+    const conversational =
+      shopping ||
+      /\b(twi+tter|x\.com|post next|tweet|what should i post)\b/i.test(userQuery);
 
     const baseSystem = options?.isFollowUp
       ? "Continue a research thread. Honor follow-ups. Cite retrieved evidence; do not invent URLs."
-      : "Research analyst for Hermes Personal OS. Produce decision-grade output grounded in evidence below.";
+      : shopping
+        ? "Shopping assistant for Hermes Personal OS. Use User memory silently — never ask the user to repeat preferences you already have. Lead with 2–3 sentences and concrete https:// links."
+        : "Research analyst for Hermes Personal OS. Produce decision-grade output grounded in evidence below.";
+
+    const sectionBlock = conversational
+      ? "Reply in plain conversational chat text (1–4 sentences or short bullet ideas). No memorandum, no MEMORANDUM header, no numbered report sections."
+      : `Required sections (use these headers): ${RESEARCH_SECTION_HEADERS.join(", ")}.
+Under Evidence, reference citation numbers like [1], [2].
+Under Risks, include counterarguments and source conflicts.
+End with a concrete Recommended next action and What I would do.`;
 
     const system = withAssistantPolicy(
       [
         options?.system ?? baseSystem,
+        "",
+        `Current date: ${new Date().toISOString()}`,
+        "Ground answers in retrieved evidence below. Do not rely on training-data release timelines if evidence conflicts.",
         "",
         formatResearchRunPlan(plan),
         "",
@@ -41,22 +63,35 @@ export class SynthesisEngine {
           ? `Conflicts to address under Risks:\n${bundle.conflicts.map((c) => `- ${c}`).join("\n")}`
           : "",
         "",
-        `Required sections (use these headers): ${sections}.`,
-        "Under Evidence, reference citation numbers like [1], [2].",
-        "Under Risks, include counterarguments and source conflicts.",
-        "End with a concrete Recommended next action and What I would do.",
+        sectionBlock,
         "",
         "User memory (apply silently):",
         memoryContext,
-      ].join("\n"),
+      ]
+        .filter((line) => line !== "")
+        .join("\n"),
     );
 
-    const answer = await this.cf.chat(userQuery, {
-      classification: "research",
-      system,
-      maxTokens: 2048,
-    });
+    let answer = "";
+    try {
+      const res = await llmCall({
+        model: MODEL_ROUTING.research_synthesis,
+        messages: [
+          { role: "system", content: system },
+          { role: "user", content: userQuery },
+        ],
+        max_tokens: conversational ? 512 : 2048,
+        temperature: 0.3,
+      });
+      answer = res.content ?? "";
+    } catch {
+      answer = "";
+    }
 
-    return answer || "No response from Cloudflare Workers AI.";
+    if (isEmptyResearchAnswer(answer) || (shopping && looksLikeLeakedReasoning(answer))) {
+      answer = formatShoppingResearchFallback(userQuery, bundle);
+    }
+
+    return answer;
   }
 }

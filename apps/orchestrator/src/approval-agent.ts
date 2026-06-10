@@ -48,6 +48,17 @@ export class ApprovalAgent {
       );
 
       if (result.status === "success") {
+        const data = result.data as { message?: string; nextStep?: string; email?: string; browser?: string } | undefined;
+        if (approval.actionType === "credential.request_login_assist" && data) {
+          const lines = [
+            data.message ?? `Approved secure login assist for ${data.email ?? "account"}.`,
+            data.nextStep,
+            data.browser === "arc"
+              ? `Open Arc to https://mail.google.com and sign in as ${data.email ?? "the account"}.`
+              : undefined,
+          ].filter(Boolean);
+          return { reply: lines.join("\n"), executed: true };
+        }
         return { reply: `Approved and executed ${approval.actionType}.`, executed: true };
       }
       return { reply: `Approved but execution failed: ${JSON.stringify(result)}` };

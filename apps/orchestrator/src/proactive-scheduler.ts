@@ -34,6 +34,7 @@ export function startProactiveScheduler(deps: {
   notificationCenter?: NotificationCenter | null;
 }): ProactiveSchedulerHandle {
   const intervalMs = Number(process.env.PROACTIVE_SCAN_INTERVAL_MS ?? 900_000);
+  const feedWatchIntervalMs = Number(process.env.FEED_WATCH_INTERVAL_MS ?? 180_000);
   const startupGraceMs = Number(process.env.PROACTIVE_STARTUP_GRACE_MS ?? 300_000);
   const morningHour = parseHourEnv("PROACTIVE_MORNING_BRIEF_HOUR", 7);
   const eveningHour = parseHourEnv("PROACTIVE_EVENING_REVIEW_HOUR", 21);
@@ -175,13 +176,44 @@ export function startProactiveScheduler(deps: {
     }
   };
 
+  const feedWatchTick = async () => {
+    if (stopped) return;
+    const state = await deps.stateRepo.getState();
+    if (state !== "running") return;
+    if (await deps.orchestrator.isProactivePaused()) return;
+    if (Date.now() - startedAt < startupGraceMs) return;
+
+    try {
+      const ctx = { actor: "system", workspaceRoot: deps.workspaceRoot };
+      const alert = await deps.orchestrator.runFeedWatchTick(ctx, deps.notificationCenter);
+      if (alert) {
+        await deps.audit.log({
+          eventType: "presence_scan",
+          actor: "system",
+          payload: { kind: "feed_watch_tick", preview: alert.slice(0, 300) },
+        });
+      }
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      console.error("Feed watch failed:", msg);
+      await deps.audit.log({
+        eventType: "agent_finished",
+        actor: "system",
+        payload: { kind: "feed_watch_tick_error", error: msg.slice(0, 400) },
+      });
+    }
+  };
+
   void tick();
+  void feedWatchTick();
   const timer = setInterval(() => void tick(), intervalMs);
+  const feedTimer = setInterval(() => void feedWatchTick(), feedWatchIntervalMs);
 
   return {
     stop: () => {
       stopped = true;
       clearInterval(timer);
+      clearInterval(feedTimer);
     },
   };
 }

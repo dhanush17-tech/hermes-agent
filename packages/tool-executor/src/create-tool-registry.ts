@@ -2,9 +2,12 @@ import { readFile } from "node:fs/promises";
 import { join, resolve, relative, isAbsolute } from "node:path";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
-import type { CloudflareWorkersAIClient, HermesModelProvider, ToolContext } from "@hermes-os/shared";
+import type { ToolContext } from "@hermes-os/shared";
+import { isDestructiveTerminalCommand } from "@hermes-os/policies";
 import type { MemoryService } from "@hermes-os/memory";
+import { smSearch } from "@hermes-os/memory";
 import { ToolRegistry } from "./registry.js";
+import { normalizeWebFetchPayload } from "./web-fetch-utils.js";
 import { MacroRegistry } from "./macro-registry.js";
 import type { ToolExecutor } from "./tool-executor.js";
 import { executeFilesystemWrite } from "./executors/filesystem-write.js";
@@ -16,6 +19,7 @@ import { executeSocialPost } from "./executors/social-post.js";
 import { executeCodeSelfEdit } from "./executors/code-self-edit.js";
 import { executeScreenObserve } from "./executors/screen-observe.js";
 import { executeBrowserGoto } from "./executors/browser-goto.js";
+import { executeBrowserArcRead } from "./executors/browser-arc-read.js";
 import { executeBrowserFillCredentials } from "./executors/browser-fill-credentials.js";
 import { proposePatch, applyProposedPatch, rollbackCheckpoint, runWorkspaceTests } from "@hermes-os/code-tools";
 import { getBrowserWorkbench } from "@hermes-os/browser-workbench";
@@ -41,14 +45,49 @@ import {
   executeGmailExtractOpenLoops,
   executeGmailSendDraft,
 } from "./executors/gmail-connector.js";
+import {
+  executeGmailResolveAccess,
+  executeGmailBrowserCheckInbox,
+  executeGmailBrowserCheckAllInboxes,
+} from "./executors/gmail-access.js";
+import {
+  executeCredentialRequestLoginAssist,
+  executeCredentialFillLoginOnce,
+} from "./executors/credential-tools.js";
+import {
+  executeTerminalProposeCommand,
+  executeTerminalRunSafe,
+  executeTerminalRunAfterApproval,
+} from "./executors/terminal-safe.js";
+import {
+  executeDesktopRunCommand,
+  executeDesktopOpenApp,
+  executeDesktopObserveScreen,
+  executeDesktopObserveApp,
+  executeDesktopAct,
+  executeDesktopType,
+  executeDesktopPress,
+  executeDesktopClick,
+  executeDesktopListApps,
+} from "./executors/desktop-control.js";
+import {
+  createSkillRegistry,
+  createSkillRunner,
+  executeSkillAuthor,
+  executeSkillDescribe,
+  executeSkillList,
+  executeSkillPromote,
+  executeSkillRegister,
+  executeSkillRun,
+  type SkillToolsDeps,
+} from "./executors/skill-tools.js";
+import type { SkillRegistry } from "@hermes-os/skills";
 
 const execFileAsync = promisify(execFile);
 
 export type ToolRegistryDeps = {
   workspaceRoot: string;
   memory: MemoryService;
-  hermes?: HermesModelProvider | null;
-  cf?: CloudflareWorkersAIClient | null;
   /** Set after ToolExecutor is constructed — required for tools.run */
   executorRef?: { current: ToolExecutor | null };
 };
@@ -56,12 +95,15 @@ export type ToolRegistryDeps = {
 export type ToolRegistryBundle = {
   registry: ToolRegistry;
   macros: MacroRegistry;
+  skills: SkillRegistry;
 };
 
 export function createToolRegistry(deps: ToolRegistryDeps): ToolRegistryBundle {
   const registry = new ToolRegistry();
   const root = resolve(deps.workspaceRoot);
   const macros = new MacroRegistry(join(root, "data", "custom-tools"));
+  const skills = createSkillRegistry(root);
+  skills.loadFromDiskSync();
 
   const safePath = (p: string): string | null => {
     const abs = isAbsolute(p) ? resolve(p) : resolve(root, p);
@@ -107,6 +149,25 @@ export function createToolRegistry(deps: ToolRegistryDeps): ToolRegistryBundle {
   });
 
   registry.register({
+    name: "memory.semantic_search",
+    async execute(payload) {
+      const body = payload as {
+        query?: string;
+        limit?: number;
+        minScore?: number;
+        filterTags?: string[];
+      };
+      if (!body.query?.trim()) return { status: "denied", reason: "query required" };
+      const hits = await smSearch(body.query.trim(), {
+        limit: body.limit ?? 10,
+        minScore: body.minScore,
+        filterTags: body.filterTags,
+      });
+      return { status: "success", data: { hits } };
+    },
+  });
+
+  registry.register({
     name: "filesystem.write",
     async execute(payload) {
       return executeFilesystemWrite(payload, root);
@@ -136,6 +197,61 @@ export function createToolRegistry(deps: ToolRegistryDeps): ToolRegistryBundle {
   });
 
   registry.register({
+    name: "desktop.observe_screen",
+    async execute(payload) {
+      return executeDesktopObserveScreen(payload, root);
+    },
+  });
+  registry.register({
+    name: "desktop.run_command",
+    async execute(payload, ctx) {
+      return executeDesktopRunCommand(payload, root, ctx.approvalId);
+    },
+  });
+  registry.register({
+    name: "desktop.open_app",
+    async execute(payload) {
+      return executeDesktopOpenApp(payload);
+    },
+  });
+  registry.register({
+    name: "desktop.observe_app",
+    async execute(payload) {
+      return executeDesktopObserveApp(payload);
+    },
+  });
+  registry.register({
+    name: "desktop.act",
+    async execute(payload) {
+      return executeDesktopAct(payload);
+    },
+  });
+  registry.register({
+    name: "desktop.type",
+    async execute(payload) {
+      return executeDesktopType(payload);
+    },
+  });
+  registry.register({
+    name: "desktop.press",
+    async execute(payload) {
+      return executeDesktopPress(payload);
+    },
+  });
+  registry.register({
+    name: "desktop.click",
+    async execute(payload) {
+      return executeDesktopClick(payload);
+    },
+  });
+  registry.register({
+    name: "desktop.list_apps",
+    async execute(payload) {
+      return executeDesktopListApps(payload);
+    },
+  });
+
+  registry.register({
     name: "browser.goto",
     async execute(payload) {
       return executeBrowserGoto(payload);
@@ -152,8 +268,11 @@ export function createToolRegistry(deps: ToolRegistryDeps): ToolRegistryBundle {
   const workbench = getBrowserWorkbench();
 
   registry.register({ name: "browser.open", execute: executeBrowserOpen });
+  registry.register({ name: "browser.arc_read", execute: executeBrowserArcRead });
   registry.register({ name: "browser.observe", execute: executeBrowserObserve });
+  registry.register({ name: "browser.cdp_observe", execute: executeBrowserObserve });
   registry.register({ name: "browser.fill", execute: (p, ctx) => executeBrowserFill(p, ctx) });
+  registry.register({ name: "browser.cdp_fill", execute: (p, ctx) => executeBrowserFill(p, ctx) });
   registry.register({ name: "browser.press", execute: executeBrowserPress });
   registry.register({ name: "browser.extract", execute: executeBrowserExtract });
   registry.register({
@@ -169,9 +288,43 @@ export function createToolRegistry(deps: ToolRegistryDeps): ToolRegistryBundle {
   registry.register({ name: "gmail.search", execute: executeGmailSearch });
   registry.register({ name: "gmail.summarize_threads", execute: executeGmailSummarizeThreads });
   registry.register({ name: "gmail.extract_open_loops", execute: executeGmailExtractOpenLoops });
+  registry.register({ name: "gmail.resolve_access", execute: executeGmailResolveAccess });
+  registry.register({ name: "gmail.browser_check_inbox", execute: executeGmailBrowserCheckInbox });
+  registry.register({
+    name: "gmail.browser_check_all_inboxes",
+    execute: executeGmailBrowserCheckAllInboxes,
+  });
   registry.register({
     name: "gmail.send_draft",
     execute: (p, ctx) => executeGmailSendDraft(p, ctx),
+  });
+
+  registry.register({
+    name: "credential.request_login_assist",
+    execute: (p, ctx) => executeCredentialRequestLoginAssist(p, ctx),
+  });
+  registry.register({
+    name: "credential.fill_login_once",
+    execute: (p, ctx) => executeCredentialFillLoginOnce(p, ctx),
+  });
+
+  registry.register({
+    name: "terminal.propose_command",
+    async execute(payload) {
+      return executeTerminalProposeCommand(payload);
+    },
+  });
+  registry.register({
+    name: "terminal.run_safe",
+    async execute(payload) {
+      return executeTerminalRunSafe(payload, root);
+    },
+  });
+  registry.register({
+    name: "terminal.run_after_approval",
+    async execute(payload, ctx) {
+      return executeTerminalRunAfterApproval(payload, root, ctx.approvalId);
+    },
   });
 
   registry.register({
@@ -185,6 +338,11 @@ export function createToolRegistry(deps: ToolRegistryDeps): ToolRegistryBundle {
         label: body.label,
       });
     },
+  });
+
+  registry.register({
+    name: "browser.cdp_click",
+    execute: (p, ctx) => executeBrowserClick(p, ctx),
   });
 
   registry.register({
@@ -262,8 +420,9 @@ export function createToolRegistry(deps: ToolRegistryDeps): ToolRegistryBundle {
   registry.register({
     name: "web.fetch",
     async execute(payload) {
-      const body = payload as { url?: string };
-      if (!body.url) return { status: "denied", reason: "url required" };
+      const normalized = normalizeWebFetchPayload(payload as Record<string, unknown>);
+      if (!normalized.ok) return { status: "denied", reason: normalized.reason };
+      const body = { url: normalized.url };
       let parsed: URL;
       try {
         parsed = new URL(body.url);
@@ -294,6 +453,12 @@ export function createToolRegistry(deps: ToolRegistryDeps): ToolRegistryBundle {
     async execute(payload, ctx) {
       const body = payload as { command?: string; cwd?: string };
       if (!body.command?.trim()) return { status: "denied", reason: "command required" };
+      if (isDestructiveTerminalCommand(body.command)) {
+        return {
+          status: "denied",
+          reason: "[requiresApproval] Destructive or high-risk terminal command",
+        };
+      }
       const cwd = body.cwd ? safePath(body.cwd) : root;
       if (!cwd) return { status: "denied", reason: "cwd outside workspace" };
       const { stdout, stderr } = await execFileAsync("sh", ["-c", body.command], {
@@ -305,8 +470,6 @@ export function createToolRegistry(deps: ToolRegistryDeps): ToolRegistryBundle {
     },
   });
 
-  const hermes = deps.hermes ?? null;
-
   registry.register({
     name: "social.post",
     async execute(payload) {
@@ -317,7 +480,7 @@ export function createToolRegistry(deps: ToolRegistryDeps): ToolRegistryBundle {
   registry.register({
     name: "code.self_edit",
     async execute(payload) {
-      return executeCodeSelfEdit(payload, root, hermes);
+      return executeCodeSelfEdit(payload, root);
     },
   });
 
@@ -338,7 +501,7 @@ export function createToolRegistry(deps: ToolRegistryDeps): ToolRegistryBundle {
   registry.register({
     name: "tools.author",
     async execute(payload) {
-      return executeToolsAuthor(payload, macros, deps.cf ?? null, registry.listNames());
+      return executeToolsAuthor(payload, macros, registry.listNames());
     },
   });
 
@@ -351,6 +514,60 @@ export function createToolRegistry(deps: ToolRegistryDeps): ToolRegistryBundle {
     },
   });
 
-  return { registry, macros };
+  const skillDeps = (): SkillToolsDeps => {
+    const ex = deps.executorRef?.current;
+    if (!ex) throw new Error("executor not ready");
+    return {
+      workspaceRoot: root,
+      registry: skills,
+      runner: createSkillRunner(skills, ex, root),
+      executor: ex,
+      catalog: registry.listNames(),
+    };
+  };
+
+  registry.register({
+    name: "skill.list",
+    async execute() {
+      return executeSkillList(skillDeps());
+    },
+  });
+
+  registry.register({
+    name: "skill.describe",
+    async execute(payload) {
+      return executeSkillDescribe(payload, skillDeps());
+    },
+  });
+
+  registry.register({
+    name: "skill.run",
+    async execute(payload, ctx) {
+      return executeSkillRun(payload, ctx, skillDeps());
+    },
+  });
+
+  registry.register({
+    name: "skill.register",
+    async execute(payload) {
+      return executeSkillRegister(payload, skillDeps());
+    },
+  });
+
+  registry.register({
+    name: "skill.promote",
+    async execute(payload) {
+      return executeSkillPromote(payload, skillDeps());
+    },
+  });
+
+  registry.register({
+    name: "skill.author",
+    async execute(payload) {
+      return executeSkillAuthor(payload, skillDeps());
+    },
+  });
+
+  return { registry, macros, skills };
 }
 

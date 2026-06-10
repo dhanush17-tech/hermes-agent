@@ -5,6 +5,8 @@ import type { IntentEntities } from "@hermes-os/shared";
 export type PendingLoginSession = {
   id: string;
   service: string;
+  email?: string;
+  browser?: "arc" | "playwright";
   url: string;
   originalText: string;
   entities?: IntentEntities;
