@@ -1,209 +1,77 @@
-# Hermes Personal OS
+# Hermes — your personal Poke agent
 
-Local-first proactive personal assistant. **Hermes Personal OS** is the control plane — it owns tools, credentials, approvals, audit, and policy. **Nous Hermes Agent** (via the Python gateway) is the primary cognitive runtime for serious tasks: it reasons and *proposes* tool calls in JSON; Personal OS *authorizes and executes* them.
+A local-first personal AI agent that lives on your Mac. One agent, real tools, real memory. It reads your inbox and calendar, searches the live web, controls your computer, books rides, drafts email, remembers things about you, and proactively looks out for you.
 
-Primary interfaces: **web chat** (`pnpm start`) and **iMessage** (`pnpm imessage`).
+Talk to it via **web chat** (`pnpm start`) or **iMessage** (`pnpm imessage`).
 
-> **Architecture diagram:** open [`docs/architecture.excalidraw`](docs/architecture.excalidraw) in the [Excalidraw VS Code/Cursor extension](https://marketplace.visualstudio.com/items?itemName=pomdtr.excalidraw-editor) for an editable visual overview.
+## How it works
+
+```
+You (chat / iMessage)
+  └─ Orchestrator  — owns history, memory, audit, approvals
+       └─ Poke agent — ONE agentic loop on OpenRouter (native tool calling)
+            ├─ inbox      gmail.check_inbox / search / summarize / send_draft
+            ├─ calendar   calendar.list
+            ├─ live web   web.search / web.fetch
+            ├─ computer   screen.observe / browser.open / terminal.run
+            ├─ rides      ride.uber / ride.lyft   (prefilled deep links)
+            ├─ memory     memory.remember / search
+            ├─ ping you   message_user
+            └─ self-edit  filesystem.read + code.self_edit + code.run_tests + code.rollback
+                 └─ ToolExecutor → risk policy → approval (if needed) → audit
+```
+
+There is no intent classifier, no router, no sub-agents. The model decides what to do with its tools. Every side effect goes through the `ToolExecutor`: registered tools only, risk levels from `configs/risk-policy.yaml`, high-risk actions pause for your approval, everything is audited.
+
+## The brain: OpenRouter
+
+The agent runs on [OpenRouter](https://openrouter.ai) so the model is a config value, not code. Defaults balance cost and quality:
+
+| Tier | Default model | Used for |
+|------|---------------|----------|
+| primary | `google/gemini-2.5-flash` | day-to-day chat + tool calls (cheap, reliable tool use) |
+| reasoning | `anthropic/claude-sonnet-4.5` | hard reasoning / coding / self-edits |
+| cheap | `google/gemini-2.5-flash-lite` | throwaway classification |
+
+Override any of them with `LLM_PRIMARY_MODEL` / `LLM_REASONING_MODEL` / `LLM_CHEAP_MODEL`.
 
 ## Quick start
 
 ```bash
 pnpm install
 pnpm build
-pnpm start
+cp .env.example .env      # add OPENROUTER_API_KEY (required)
+pnpm start                # web chat at http://127.0.0.1:3847
 ```
-
-Open the chat UI at http://127.0.0.1:3847
 
 Try in chat:
 
 ```
+check my email
+what's on my calendar today
+where can I park free near Munger 1 at Stanford — give me the maps link
+book me an uber to SFO
+add a tool that tells me the current bitcoin price
 daily brief
-check my gmail
-research best pillow for a side sleeper and give me buy links
-status
 ```
 
-Copy `.env.example` to `.env` and fill in Cloudflare + optional Hermes gateway keys.
+## Self-editing
 
-## Design principle
+Ask it to extend itself and it does — no manual coding. It reads the relevant file (`filesystem.read`), writes the complete new contents (`code.self_edit`), and can verify (`code.run_tests`). Every edit is checkpoint-backed and reversible (`code.rollback`). Protected paths (`.env`, `secrets/`, `.git/`, `node_modules/`) are refused.
 
-```
-Hermes Agent proposes  →  Personal OS authorizes  →  ToolExecutor executes
-```
+## Proactive care
 
-The cognitive runtime **never** calls tools directly. Every side effect goes through:
+`pnpm start` runs a scheduler that:
 
-1. **ToolExecutor** — registered tools only; unknown tools are denied
-2. **PolicyEngine** — risk levels from `configs/risk-policy.yaml`
-3. **ApprovalBroker** — capability leases for high-risk actions
-4. **AuditLogger** — full trail in SQLite + `data/activity.jsonl`
+- **Forecasts** your day — morning brief from calendar + inbox, plus a risk scan (`configs/proactivity-policy.yaml` thresholds).
+- **Looks out for you** — if you're messaging in the small hours, it sends one gentle late-night nudge (tune with `PROACTIVE_WELLBEING` / `PROACTIVE_LATE_NIGHT_*`).
+- **Pings you** via iMessage when something crosses the notification threshold.
 
-Runtime tool payloads **cannot** include `approvalId` or capability-lease bypass fields.
+## Optional integrations
 
-## Architecture overview
-
-```
-You (Chat / iMessage)
-  └─ UI Layer (chat-server, imessage-bridge)
-       └─ Orchestrator (control plane)
-            ├─ IntentClassifier (Cloudflare — cheap, fast)
-            ├─ Specialized local agents (research, laptop, autonomous, …)
-            └─ Serious tasks → RuntimeRouter
-                 ├─ Hermes Gateway (primary) — JSON tool proposals
-                 └─ Cloudflare Workers AI (fallback / classifier)
-                      └─ Cognitive tool loop (≤8 rounds)
-                           └─ ToolExecutor → Policy → Approval → Audit
-                                └─ Gmail, browser, web, filesystem, terminal, memory, …
-```
-
-See also: [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md), [`docs/SAFETY_MODEL.md`](docs/SAFETY_MODEL.md).
-
-## Agent runtime (`packages/agent-runtime`)
-
-New package that abstracts cognitive backends behind a single interface.
-
-| Module | Role |
-|--------|------|
-| `AgentRuntime` | `run()` + `continue()` contract for all cognitive backends |
-| `HermesGatewayRuntime` | Talks to Nous Hermes Python gateway (`:8642`) |
-| `CloudflareRuntime` | Workers AI fallback when gateway is down |
-| `RuntimeRouter` | Picks runtime: Hermes primary → CF fallback → local agents |
-| `hermes-tool-protocol` | System prompt + JSON parse for `toolRequests`, `memoryCandidates`, `skillCandidates` |
-
-### Runtime selection
-
-```typescript
-// RuntimeRouter.chooseKind()
-local          → approval_response, status (handled in-process)
-cloudflare     → classification, extraction (cheap utility)
-hermes_primary → Hermes gateway available (research, coding, browser, personal_ops, …)
-cloudflare     → Hermes unavailable
-local          → no remote runtime; fall back to specialized agents
-```
-
-### Cognitive tool loop
-
-For serious tasks (`handleSeriousTask` in the orchestrator):
-
-1. Build `AgentRunInput` with memories, open loops, tasks, and the **tool catalog** (names + risk levels — no secrets).
-2. Call `runtime.run(input)` with timeout (`HERMES_RUNTIME_TIMEOUT_MS`, default 45s).
-3. For each `toolRequest` in the response:
-   - Validate tool is registered; reject bypass payloads.
-   - Execute via `ToolExecutor.invoke()`.
-   - If `pending_approval`, return to user immediately.
-4. Feed results to `runtime.continue(sessionId, …)` — up to **8 rounds**.
-5. Process `memoryCandidates` (high-confidence, normal sensitivity only) and save `skillCandidates` as drafts under `data/skill-candidates/`.
-
-### Tool catalog protocol
-
-Hermes receives a structured catalog built from `ToolRegistry`. It returns JSON:
-
-```json
-{
-  "final": "reply when done",
-  "toolRequests": [{ "toolName": "web.fetch", "payload": {}, "reason": "...", "riskHint": "read" }],
-  "memoryCandidates": [],
-  "skillCandidates": [],
-  "reasoningSummary": "brief"
-}
-```
-
-## Orchestrator routing
-
-| Intent | Primary path |
-|--------|----------------|
-| `research` (shopping/links) | Deterministic `ResearchAgent` |
-| `research` (deep) | Cognitive runtime loop |
-| `coding` | Cognitive runtime loop |
-| `browser_task` / `laptop_control` | Cognitive loop, or `LaptopControlAgent` for explicit browser/login/Gmail-open |
-| `personal_ops` | Cognitive runtime loop |
-| `memory_update` | `MemoryAgent` |
-| `writing` | `WritingAgent` |
-| `approval_response` | `ApprovalAgent` |
-| `unknown` | Cognitive loop or `AutonomousAgent` for multi-step browser work |
-
-**Browser-controlled service requests** (open Gmail, log in, fill credentials) route early to `LaptopControlAgent` with headed Playwright — not the autonomous planner — to avoid JSON parse failures on credential replies.
-
-## Specialized local agents
-
-| Agent | When used |
-|-------|-----------|
-| `ResearchAgent` | Structured research plans; shopping/link queries |
-| `LaptopControlAgent` | Screen observe, browser goto, credential fill, Arc integration |
-| `AutonomousAgent` | Multi-step browser autonomy (think → tool → screen → replan) |
-| `CodingAgent` | Direct code edits via Hermes gateway or pending-edits queue |
-| `ChiefOfStaffAgent` | Morning/evening briefs, connector ingest, risk surfacing |
-| `BrowserAgent` | Lightweight browser tasks |
-| `GeneralAgent` | Memory recall, catch-all with recent context |
-
-## Tool execution layer
-
-Registered tools (see `packages/tool-executor`):
-
-- **Memory:** `memory.remember`, `memory.forget`, `memory.search`
-- **Filesystem:** `filesystem.read`, `filesystem.write` (gated)
-- **Web:** `web.fetch`
-- **Gmail:** `gmail.list`, `gmail.read`, `gmail.search` (OAuth tokens under `~/.hermes/secrets/`)
-- **Browser:** `browser.open`, `browser.goto`, `browser.fill`, `browser.fill_credentials`, `browser.extract`, `browser.click` (Playwright headed by default; Arc fallback via AppleScript)
-- **Terminal:** `terminal.run` (approval-gated)
-- **Social:** `social.post` — opens compose in browser + `data/outbox/`
-- **Screen:** `screen.observe`
-- **Code:** `code.self_edit`
-- **Messaging:** `imessage.send` (approval-gated)
-
-### Browser dual-path
-
-| Engine | Default | Use case |
-|--------|---------|----------|
-| Playwright (headed) | Yes | `browser.open`, `browser.fill_credentials`, DOM refs |
-| Arc (AppleScript) | `HERMES_BROWSER_ENGINE=arc` | `browser.goto` opens URL in Arc |
-| Headless | `HERMES_BROWSER_HEADLESS=1` | CI / background fetch only |
-
-Connect to an existing browser: `HERMES_CDP_ENDPOINT=http://127.0.0.1:9222`
-
-## Safety and policy
-
-- Risk policy: `configs/risk-policy.yaml`
-- Memory policy: `configs/memory-policy.yaml`
-- Autonomy policy: `configs/autonomy-policy.yaml`
-- Approvals expire after `APPROVAL_TTL_SECONDS` (default 300s)
-- Denied tool calls include reasons in the activity log
-
-High-risk actions (terminal, sends, posts, sensitive browser fills) pause for iMessage/web approval before execution.
-
-## Hermes Python backend
-
-Install and run [NousResearch/hermes-agent](https://github.com/NousResearch/hermes-agent) separately:
-
-```bash
-chmod +x scripts/setup-hermes.sh
-./scripts/setup-hermes.sh
-source ~/.hermes/hermes-agent/venv/bin/activate
-hermes setup
-hermes gateway
-```
-
-Copy `API_SERVER_KEY` from `~/.hermes/.env` into this repo's `.env` as `HERMES_API_KEY`.
-
-**Cloudflare Workers AI** (recommended on tight RAM): `./scripts/configure-cloudflare.sh` — see [docs/CLOUDFLARE_WORKERS_AI.md](docs/CLOUDFLARE_WORKERS_AI.md).
-
-## Environment variables
-
-| Variable | Purpose |
-|----------|---------|
-| `HERMES_API_URL` | Hermes gateway URL (default `http://127.0.0.1:8642`) |
-| `HERMES_API_KEY` | Gateway API key |
-| `CLOUDFLARE_ACCOUNT_ID` / `CLOUDFLARE_API_TOKEN` | Workers AI |
-| `HERMES_RUNTIME_TIMEOUT_MS` | Cognitive runtime timeout (default `45000`) |
-| `HERMES_BROWSER_HEADLESS` | Set `1` for headless Playwright |
-| `HERMES_BROWSER_ENGINE` | `playwright` (default) or `arc` |
-| `HERMES_CDP_ENDPOINT` | Connect Playwright to existing Chrome |
-| `GOOGLE_ACCOUNTS` | Multi-account Gmail OAuth config |
-| `SUPERMEMORY_API_KEY` | Optional semantic memory |
-
-Full list: [`.env.example`](.env.example)
+- **Gmail / Calendar**: `node scripts/google-oauth.mjs` (tokens under `~/.hermes/secrets/`). Calendar reads the local macOS Calendar.
+- **Supermemory**: set `SUPERMEMORY_API_KEY` for semantic long-term memory.
+- **Cloudflare Workers AI**: optional, only for vision/screen utilities — not the brain.
 
 ## Monorepo layout
 
@@ -211,43 +79,27 @@ Full list: [`.env.example`](.env.example)
 apps/
   chat-server/       Web chat UI + control API
   imessage-bridge/   iMessage poll/reply
-  orchestrator/      Intent routing, agents, cognitive loop
+  orchestrator/      Poke agent loop, control plane, proactive scheduler
   daemon/            Background lifecycle
 packages/
-  agent-runtime/     Hermes + Cloudflare cognitive backends
-  tool-executor/     Tool registry and execution
-  approval-broker/   Capability leases
-  policies/          YAML policy loaders
+  llm-client/        OpenRouter client (native tool calling)
+  tool-executor/     Tool registry + execution
+  approval-broker/   Capability leases for high-risk actions
+  policies/          Risk / proactivity policy loaders
   context-graph/     SQLite data layer
   audit-log/         Activity trail
   browser-control/   Playwright + session manager
-  connectors/        Screen capture → source_items
-  memory/            Long-term memory CRUD
-configs/             intents, risk, memory, autonomy, models
-docs/                Architecture, setup, safety
+  connectors/        Gmail, Calendar, screen, files
+  memory/            Long-term memory
+  risk-engine/       Proactive risk detectors
+  code-tools/        Patch apply / rollback / test runner
+configs/             risk, proactivity, memory policies
 ```
-
-## Phase 2: iMessage + proactive
-
-```bash
-pnpm imessage   # poll chat.db, reply via Messages.app, proactive scans
-```
-
-**Observe:** periodic Arc presence scans (Gmail, X, LinkedIn, Calendar screenshots). **Act:** `AutonomousAgent` multi-step loops; pauses for login/CAPTCHA/ambiguous UI. See [docs/PHASE2.md](docs/PHASE2.md), [docs/PRODUCT.md](docs/PRODUCT.md).
 
 ## Development
 
 ```bash
-pnpm build      # compile all packages
+pnpm build      # compile everything (scripts/build-all.mjs, dependency order)
 pnpm test       # vitest across packages
 pnpm logs       # tail activity log
 ```
-
-## Documentation
-
-- [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) — component reference
-- [docs/architecture.excalidraw](docs/architecture.excalidraw) — visual diagram (Excalidraw)
-- [docs/SETUP.md](docs/SETUP.md) — full setup guide
-- [docs/SAFETY_MODEL.md](docs/SAFETY_MODEL.md) — approval and risk model
-- [docs/INTENTS.md](docs/INTENTS.md) — intent catalog
-- [docs/MONITORING.md](docs/MONITORING.md) — activity and health

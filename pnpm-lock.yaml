@@ -12,9 +12,6 @@ importers:
 
   .:
     dependencies:
-      '@hermes-os/agent-runtime':
-        specifier: workspace:*
-        version: link:packages/agent-runtime
       '@hermes-os/chat-server':
         specifier: workspace:*
         version: link:apps/chat-server
@@ -24,6 +21,9 @@ importers:
       '@hermes-os/imessage-bridge':
         specifier: workspace:*
         version: link:apps/imessage-bridge
+      '@hermes-os/llm-client':
+        specifier: workspace:*
+        version: link:packages/llm-client
       '@hermes-os/orchestrator':
         specifier: workspace:*
         version: link:apps/orchestrator
@@ -170,9 +170,6 @@ importers:
 
   apps/orchestrator:
     dependencies:
-      '@hermes-os/agent-runtime':
-        specifier: workspace:*
-        version: link:../../packages/agent-runtime
       '@hermes-os/approval-broker':
         specifier: workspace:*
         version: link:../../packages/approval-broker
@@ -185,6 +182,9 @@ importers:
       '@hermes-os/context-graph':
         specifier: workspace:*
         version: link:../../packages/context-graph
+      '@hermes-os/llm-client':
+        specifier: workspace:*
+        version: link:../../packages/llm-client
       '@hermes-os/memory':
         specifier: workspace:*
         version: link:../../packages/memory
@@ -194,40 +194,15 @@ importers:
       '@hermes-os/policies':
         specifier: workspace:*
         version: link:../../packages/policies
-      '@hermes-os/research':
-        specifier: workspace:*
-        version: link:../../packages/research
-      '@hermes-os/risk-engine':
-        specifier: workspace:*
-        version: link:../../packages/risk-engine
       '@hermes-os/shared':
         specifier: workspace:*
         version: link:../../packages/shared
       '@hermes-os/tool-executor':
         specifier: workspace:*
         version: link:../../packages/tool-executor
-      '@hermes-os/workflows':
-        specifier: workspace:*
-        version: link:../../packages/workflows
       yaml:
         specifier: ^2.9.0
         version: 2.9.0
-    devDependencies:
-      '@types/node':
-        specifier: ^22.10.2
-        version: 22.19.19
-      typescript:
-        specifier: 5.7.2
-        version: 5.7.2
-      vitest:
-        specifier: ^2.1.8
-        version: 2.1.9(@types/node@22.19.19)
-
-  packages/agent-runtime:
-    dependencies:
-      '@hermes-os/shared':
-        specifier: workspace:*
-        version: link:../shared
     devDependencies:
       '@types/node':
         specifier: ^22.10.2
@@ -401,6 +376,22 @@ importers:
         specifier: ^2.1.8
         version: 2.1.9(@types/node@22.19.19)
 
+  packages/llm-client:
+    dependencies:
+      '@hermes-os/shared':
+        specifier: workspace:*
+        version: link:../shared
+    devDependencies:
+      '@types/node':
+        specifier: ^22.10.2
+        version: 22.19.19
+      typescript:
+        specifier: 5.7.2
+        version: 5.7.2
+      vitest:
+        specifier: ^2.1.8
+        version: 2.1.9(@types/node@22.19.19)
+
   packages/memory:
     dependencies:
       '@hermes-os/context-graph':
@@ -456,31 +447,6 @@ importers:
       zod:
         specifier: ^3.24.1
         version: 3.25.76
-    devDependencies:
-      '@types/node':
-        specifier: ^22.10.2
-        version: 22.19.19
-      typescript:
-        specifier: 5.7.2
-        version: 5.7.2
-      vitest:
-        specifier: ^2.1.8
-        version: 2.1.9(@types/node@22.19.19)
-
-  packages/research:
-    dependencies:
-      '@hermes-os/connectors':
-        specifier: workspace:*
-        version: link:../connectors
-      '@hermes-os/context-graph':
-        specifier: workspace:*
-        version: link:../context-graph
-      '@hermes-os/memory':
-        specifier: workspace:*
-        version: link:../memory
-      '@hermes-os/shared':
-        specifier: workspace:*
-        version: link:../shared
     devDependencies:
       '@types/node':
         specifier: ^22.10.2
@@ -563,31 +529,6 @@ importers:
       '@hermes-os/context-graph':
         specifier: workspace:*
         version: link:../context-graph
-      '@types/node':
-        specifier: ^22.10.2
-        version: 22.19.19
-      typescript:
-        specifier: 5.7.2
-        version: 5.7.2
-      vitest:
-        specifier: ^2.1.8
-        version: 2.1.9(@types/node@22.19.19)
-
-  packages/workflows:
-    dependencies:
-      '@hermes-os/connectors':
-        specifier: workspace:*
-        version: link:../connectors
-      '@hermes-os/shared':
-        specifier: workspace:*
-        version: link:../shared
-      yaml:
-        specifier: ^2.6.1
-        version: 2.9.0
-      zod:
-        specifier: ^3.24.1
-        version: 3.25.76
-    devDependencies:
       '@types/node':
         specifier: ^22.10.2
         version: 22.19.19

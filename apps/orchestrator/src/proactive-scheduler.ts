@@ -53,9 +53,14 @@ export function startProactiveScheduler(deps: {
     deps.workspaceRoot,
   );
 
+  const wellbeingEnabled = process.env.PROACTIVE_WELLBEING !== "0";
+  const lateStart = parseHourEnv("PROACTIVE_LATE_NIGHT_START", 0);
+  const lateEnd = parseHourEnv("PROACTIVE_LATE_NIGHT_END", 4);
+
   let stopped = false;
   let lastMorningDate = "";
   let lastEveningDate = "";
+  let lastWellbeingDate = "";
 
   const sendFallback = async (text: string) => {
     const recipient = deps.notifyHandle ?? process.env.IMESSAGE_DEFAULT_RECIPIENT;
@@ -133,6 +138,33 @@ export function startProactiveScheduler(deps: {
           eventType: "proactive_notification_sent",
           actor: "system",
           payload: { type: "morning_brief" },
+        });
+      }
+
+      // Late-night wellbeing: only nudge if the user is actually up and active.
+      const hour = now.getHours();
+      const inLateWindow =
+        lateStart <= lateEnd ? hour >= lateStart && hour < lateEnd : hour >= lateStart || hour < lateEnd;
+      if (
+        wellbeingEnabled &&
+        inLateWindow &&
+        lastWellbeingDate !== dateKey &&
+        (await deps.orchestrator.hadRecentUserActivity(20))
+      ) {
+        lastWellbeingDate = dateKey;
+        const nudge = await deps.orchestrator.runWellbeingNudge();
+        await dispatchNotification({
+          type: "reminder",
+          title: "Still up?",
+          body: nudge.slice(0, 600),
+          score: 65,
+          dedupeKey: `wellbeing:${dateKey}`,
+          priority: "low",
+        });
+        await deps.audit.log({
+          eventType: "proactive_notification_sent",
+          actor: "system",
+          payload: { type: "wellbeing_nudge" },
         });
       }
 

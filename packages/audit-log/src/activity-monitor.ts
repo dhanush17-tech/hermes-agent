@@ -8,6 +8,7 @@ export type { ActivityRow } from "./format-activity.js";
 export type ActivitySubscriber = (row: ActivityRow) => void;
 
 export type AgentName =
+  | "PokeAgent"
   | "Router"
   | "ResearchAgent"
   | "ChiefOfStaffAgent"

@@ -11,7 +11,6 @@ import {
   TasksRepository,
   OpenLoopsRepository,
   SourceItemsRepository,
-  RisksRepository,
   createContextGraphService,
   type ContextGraphService,
 } from "@hermes-os/context-graph";
@@ -23,8 +22,6 @@ import {
   createCloudflareClientFromEnv,
   createHermesClientFromEnv,
   findWorkspaceRoot,
-  IntentClassifier,
-  type IntentClassifierPort,
 } from "@hermes-os/shared";
 import {
   createHybridMemoryService,
@@ -33,7 +30,6 @@ import {
 } from "@hermes-os/memory";
 import { createDefaultConnectorHub } from "@hermes-os/connectors";
 import { Orchestrator } from "./orchestrator.js";
-import { createAgentRuntime } from "./agent-runtime.js";
 import { HindranceCoordinator } from "./hindrance-coordinator.js";
 
 export type PersonalOsSystem = {
@@ -66,7 +62,6 @@ export function bootstrapPersonalOs(options?: {
   workspaceRoot?: string;
   approvalTtlSeconds?: number;
   now?: () => Date;
-  intentClassifier?: IntentClassifierPort | null;
 }): PersonalOsSystem {
   let workspaceRoot = options?.workspaceRoot ?? findWorkspaceRoot();
   try {
@@ -90,13 +85,11 @@ export function bootstrapPersonalOs(options?: {
   const tasksRepo = new TasksRepository(db);
   const openLoopsRepo = new OpenLoopsRepository(db);
   const sourceItemsRepo = new SourceItemsRepository(db);
-  const risksRepo = new RisksRepository(db);
   const contextGraph = createContextGraphService(db);
   const audit = new AuditLogger(auditRepo);
   const activity = new ActivityMonitor(audit, { workspaceRoot });
   activity.attachToAuditLogger(audit);
   const hindrance = new HindranceCoordinator(workspaceRoot, activity);
-  const connectorHub = createDefaultConnectorHub(sourceItemsRepo, workspaceRoot);
 
   const ttl = Number(process.env.APPROVAL_TTL_SECONDS ?? options?.approvalTtlSeconds ?? 300);
   const broker = new ApprovalBroker(approvalsRepo, capabilityLeasesRepo, audit, ttl, options?.now);
@@ -115,45 +108,15 @@ export function bootstrapPersonalOs(options?: {
   macros.loadFromDiskSync();
   const executor = new ToolExecutor(policy, broker, audit, registry);
   executorRef.current = executor;
-  const intentClassifier =
-    options?.intentClassifier ??
-    (cloudflare ? new IntentClassifier(cloudflare) : null);
-
-  const agents = createAgentRuntime({
-    cloudflare,
-    hermes,
-    memory: memoryService,
-    executor,
-    registry,
-    workspaceRoot,
-    tasks: tasksRepo,
-    openLoops: openLoopsRepo,
-    sourceItems: sourceItemsRepo,
-    risks: risksRepo,
-    stateRepo,
-    proactivity: loadProactivityPolicy(),
-    connectorHub,
-    contextGraph,
-    audit,
-    activity,
-  });
-
   const orchestrator = new Orchestrator(
     broker,
     executor,
-    registry,
     audit,
     activity,
-    hindrance,
     auditRepo,
     stateRepo,
-    tasksRepo,
-    openLoopsRepo,
     workspaceRoot,
-    agents,
     memoryService,
-    intentClassifier,
-    contextGraph,
   );
 
   return {
