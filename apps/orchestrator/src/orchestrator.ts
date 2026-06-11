@@ -171,6 +171,31 @@ export class Orchestrator {
     return null;
   }
 
+  /** Did the user message us within the last `minutes`? (signals they're awake/active) */
+  async hadRecentUserActivity(minutes = 20): Promise<boolean> {
+    const sinceIso = new Date(Date.now() - minutes * 60_000).toISOString();
+    try {
+      const rows = await this.auditRepo.listFiltered({
+        eventTypes: ["incoming_message"],
+        sinceIso,
+        limit: 1,
+      });
+      return rows.length > 0;
+    } catch {
+      return false;
+    }
+  }
+
+  /** A short, caring late-night nudge that draws on what we know about the user. */
+  async runWellbeingNudge(): Promise<string> {
+    return this.runProactive(
+      "It's the middle of the night and I'm still up and active. As someone who genuinely " +
+        "cares about me, send ONE short, warm message: gently point out the late hour, tie it " +
+        "to anything you know about my sleep or tomorrow's calendar, and suggest wrapping up. " +
+        "No lecture — just a caring nudge from a friend.",
+    );
+  }
+
   async isProactivePaused(): Promise<boolean> {
     void this.stateRepo;
     return false;

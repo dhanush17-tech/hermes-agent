@@ -7,11 +7,12 @@ import { resolve } from "node:path";
 const root = resolve(import.meta.dirname, "..");
 const dirs = [
   "packages/shared",
-  "packages/agent-runtime",
+  "packages/llm-client",
   "packages/policies",
   "packages/context-graph",
   "packages/connectors",
   "packages/browser-control",
+  "packages/tool-executor",
   "apps/orchestrator",
   "apps/imessage-bridge",
 ];
@@ -20,10 +21,10 @@ let failed = false;
 for (const rel of dirs) {
   const pkgPath = resolve(root, rel, "package.json");
   if (!existsSync(pkgPath)) continue;
-  const pkg = JSON.parse(readFileSync(pkgPath, "utf8")) as { scripts?: { test?: string } };
+  const pkg = JSON.parse(readFileSync(pkgPath, "utf8"));
   if (!pkg.scripts?.test) continue;
   console.log(`\n▸ test ${rel}`);
-  const r = spawnSync("pnpm", ["exec", "vitest", "run"], {
+  const r = spawnSync("pnpm", ["exec", "vitest", "run", "--passWithNoTests"], {
     cwd: resolve(root, rel),
     stdio: "inherit",
   });
