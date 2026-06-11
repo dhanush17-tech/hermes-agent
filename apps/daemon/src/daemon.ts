@@ -102,7 +102,7 @@ export async function startDaemon(): Promise<DaemonHandle> {
 
   if (process.env.HERMES_ENABLE_IMESSAGE === "1") {
     const bridge = new IMessageBridge(sys.orchestrator);
-    void bridge.runLoop().catch((err) => {
+    void bridge.runLoop().catch((err: unknown) => {
       console.error("iMessage bridge error:", err instanceof Error ? err.message : err);
     });
     console.log("iMessage bridge: enabled (HERMES_ENABLE_IMESSAGE=1)");

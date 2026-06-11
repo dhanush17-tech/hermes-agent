@@ -27,8 +27,8 @@ const ORDER = [
   "packages/tool-executor",
   "apps/orchestrator",
   "apps/chat-server",
-  "apps/daemon",
   "apps/imessage-bridge",
+  "apps/daemon",
   "src",
 ];
 
