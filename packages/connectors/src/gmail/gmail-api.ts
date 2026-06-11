@@ -1,4 +1,5 @@
-import { readAccountToken, type GoogleAccountConfig } from "./gmail-auth.js";
+import { type GoogleAccountConfig } from "./gmail-auth.js";
+import { getValidAccountToken } from "../google/google-account-token.js";
 
 export type GmailListResponse = { messages?: Array<{ id: string; threadId: string }> };
 
@@ -52,7 +53,7 @@ export async function tokenForAccount(
 ): Promise<string> {
   const account = accounts.find((a) => a.id === accountId);
   if (!account) throw new Error(`Unknown Gmail account: ${accountId}`);
-  const token = await readAccountToken(account.tokenPath);
+  const token = await getValidAccountToken(account);
   if (!token) throw new Error(`No token for ${account.email} at ${account.tokenPath}`);
   return token;
 }
