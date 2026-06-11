@@ -14,6 +14,8 @@ import { executeToolsAuthor } from "./executors/tools-author.js";
 import { executeIMessageSend } from "./executors/imessage-send.js";
 import { executeSocialPost } from "./executors/social-post.js";
 import { executeCodeSelfEdit } from "./executors/code-self-edit.js";
+import { executeCalendarList } from "./executors/calendar-connector.js";
+import { executeRideUber, executeRideLyft } from "./executors/ride-deeplinks.js";
 import { executeScreenObserve } from "./executors/screen-observe.js";
 import { executeBrowserGoto } from "./executors/browser-goto.js";
 import { executeBrowserFillCredentials } from "./executors/browser-fill-credentials.js";
@@ -283,9 +285,44 @@ export function createToolRegistry(deps: ToolRegistryDeps): ToolRegistryBundle {
         data: {
           url: parsed.toString(),
           status: res.status,
-          content: text.slice(0, 20_000),
+          content: htmlToText(text).slice(0, 20_000),
         },
       };
+    },
+  });
+
+  registry.register({
+    name: "web.search",
+    async execute(payload) {
+      const body = payload as { query?: string };
+      const query = body.query?.trim();
+      if (!query) return { status: "denied", reason: "query required" };
+      const url = `https://lite.duckduckgo.com/lite/?q=${encodeURIComponent(query)}`;
+      try {
+        const res = await fetch(url, {
+          headers: { "User-Agent": "Mozilla/5.0 (Macintosh) HermesPersonalOS/1.0" },
+          signal: AbortSignal.timeout(15_000),
+        });
+        const html = await res.text();
+        return {
+          status: "success",
+          data: { query, results: htmlToText(html).slice(0, 8_000) },
+        };
+      } catch (err) {
+        return { status: "denied", reason: err instanceof Error ? err.message : String(err) };
+      }
+    },
+  });
+
+  registry.register({
+    name: "message_user",
+    async execute(payload) {
+      // Proactively ping the owner. Always targets the owner's own handle —
+      // never an arbitrary recipient — so it can't be used to message others.
+      const body = payload as { body?: string; text?: string };
+      const text = (body.body ?? body.text ?? "").trim();
+      if (!text) return { status: "denied", reason: "body required" };
+      return executeIMessageSend({ body: text });
     },
   });
 
@@ -305,8 +342,6 @@ export function createToolRegistry(deps: ToolRegistryDeps): ToolRegistryBundle {
     },
   });
 
-  const hermes = deps.hermes ?? null;
-
   registry.register({
     name: "social.post",
     async execute(payload) {
@@ -317,7 +352,28 @@ export function createToolRegistry(deps: ToolRegistryDeps): ToolRegistryBundle {
   registry.register({
     name: "code.self_edit",
     async execute(payload) {
-      return executeCodeSelfEdit(payload, root, hermes);
+      return executeCodeSelfEdit(payload, root);
+    },
+  });
+
+  registry.register({
+    name: "calendar.list",
+    async execute(payload) {
+      return executeCalendarList(payload);
+    },
+  });
+
+  registry.register({
+    name: "ride.uber",
+    async execute(payload) {
+      return executeRideUber(payload);
+    },
+  });
+
+  registry.register({
+    name: "ride.lyft",
+    async execute(payload) {
+      return executeRideLyft(payload);
     },
   });
 
@@ -352,5 +408,23 @@ export function createToolRegistry(deps: ToolRegistryDeps): ToolRegistryBundle {
   });
 
   return { registry, macros };
+}
+
+/** Strip HTML to readable text so the model isn't fed markup noise. */
+function htmlToText(html: string): string {
+  return html
+    .replace(/<script[\s\S]*?<\/script>/gi, " ")
+    .replace(/<style[\s\S]*?<\/style>/gi, " ")
+    .replace(/<\/(p|div|li|tr|h[1-6]|br)>/gi, "\n")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/&nbsp;/gi, " ")
+    .replace(/&amp;/gi, "&")
+    .replace(/&lt;/gi, "<")
+    .replace(/&gt;/gi, ">")
+    .replace(/&#39;|&apos;/gi, "'")
+    .replace(/&quot;/gi, '"')
+    .replace(/[ \t]+/g, " ")
+    .replace(/\n\s*\n\s*\n+/g, "\n\n")
+    .trim();
 }
 

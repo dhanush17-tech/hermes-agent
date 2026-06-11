@@ -10,7 +10,7 @@ const root = resolve(import.meta.dirname, "..");
 
 const ORDER = [
   "packages/shared",
-  "packages/agent-runtime",
+  "packages/llm-client",
   "packages/policies",
   "packages/context-graph",
   "packages/audit-log",
@@ -22,8 +22,6 @@ const ORDER = [
   "packages/browser-control",
   "packages/browser-workbench",
   "packages/connectors",
-  "packages/research",
-  "packages/workflows",
   "packages/tool-executor",
   "apps/orchestrator",
   "apps/chat-server",

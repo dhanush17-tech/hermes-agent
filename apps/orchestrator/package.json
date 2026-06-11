@@ -26,20 +26,16 @@
     "lint": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
-    "@hermes-os/agent-runtime": "workspace:*",
     "@hermes-os/approval-broker": "workspace:*",
     "@hermes-os/audit-log": "workspace:*",
-    "@hermes-os/agent-runtime": "workspace:*",
     "@hermes-os/connectors": "workspace:*",
     "@hermes-os/context-graph": "workspace:*",
+    "@hermes-os/llm-client": "workspace:*",
     "@hermes-os/memory": "workspace:*",
     "@hermes-os/notification-center": "workspace:*",
-    "@hermes-os/research": "workspace:*",
     "@hermes-os/policies": "workspace:*",
-    "@hermes-os/risk-engine": "workspace:*",
     "@hermes-os/shared": "workspace:*",
     "@hermes-os/tool-executor": "workspace:*",
-    "@hermes-os/workflows": "workspace:*",
     "yaml": "^2.9.0"
   },
   "devDependencies": {

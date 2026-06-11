@@ -19,6 +19,21 @@ tools:
   calendar.read:
     risk: read
     approval: false
+  calendar.list:
+    risk: read
+    approval: false
+  ride.uber:
+    risk: low
+    approval: false
+  ride.lyft:
+    risk: low
+    approval: false
+  web.search:
+    risk: read
+    approval: false
+  message_user:
+    risk: low
+    approval: false
   calendar.create:
     risk: medium
     approval: true
@@ -109,9 +124,13 @@ tools:
   payments.submit:
     risk: high
     approval: always
+  # Self-edit is checkpoint-backed and fully reversible via code.rollback, so we
+  # let the agent edit its own code without a per-edit approval prompt. Every
+  # edit is audited; protected paths (.env, secrets, .git, node_modules) are
+  # refused by the executor.
   code.self_edit:
-    risk: high
-    approval: always
+    risk: medium
+    approval: false
   code.propose_patch:
     risk: low
     approval: false
