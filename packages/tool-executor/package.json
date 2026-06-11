@@ -25,7 +25,8 @@
     "@hermes-os/code-tools": "workspace:*",
     "@hermes-os/browser-workbench": "workspace:*",
     "@hermes-os/browser-control": "workspace:*",
-    "@hermes-os/connectors": "workspace:*"
+    "@hermes-os/connectors": "workspace:*",
+    "@hermes-os/connections": "workspace:*"
   },
   "devDependencies": {
     "@hermes-os/approval-broker": "workspace:*",

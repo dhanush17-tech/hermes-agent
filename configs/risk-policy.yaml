@@ -22,6 +22,18 @@ tools:
   calendar.list:
     risk: read
     approval: false
+  connection.list:
+    risk: read
+    approval: false
+  connection.connect:
+    risk: medium
+    approval: false
+  connection.remove:
+    risk: medium
+    approval: false
+  connection.request:
+    risk: medium
+    approval: false
   ride.uber:
     risk: low
     approval: false

@@ -15,6 +15,12 @@ import { executeIMessageSend } from "./executors/imessage-send.js";
 import { executeSocialPost } from "./executors/social-post.js";
 import { executeCodeSelfEdit } from "./executors/code-self-edit.js";
 import { executeCalendarList } from "./executors/calendar-connector.js";
+import {
+  executeConnectionConnect,
+  executeConnectionList,
+  executeConnectionRemove,
+  executeConnectionRequest,
+} from "./executors/connection-tools.js";
 import { executeRideUber, executeRideLyft } from "./executors/ride-deeplinks.js";
 import { executeScreenObserve } from "./executors/screen-observe.js";
 import { executeBrowserGoto } from "./executors/browser-goto.js";
@@ -360,6 +366,31 @@ export function createToolRegistry(deps: ToolRegistryDeps): ToolRegistryBundle {
     name: "calendar.list",
     async execute(payload) {
       return executeCalendarList(payload);
+    },
+  });
+
+  registry.register({
+    name: "connection.list",
+    async execute() {
+      return executeConnectionList();
+    },
+  });
+  registry.register({
+    name: "connection.connect",
+    async execute(payload) {
+      return executeConnectionConnect(payload);
+    },
+  });
+  registry.register({
+    name: "connection.remove",
+    async execute(payload) {
+      return executeConnectionRemove(payload);
+    },
+  });
+  registry.register({
+    name: "connection.request",
+    async execute(payload) {
+      return executeConnectionRequest(payload);
     },
   });
 

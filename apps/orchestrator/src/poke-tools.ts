@@ -62,10 +62,52 @@ export const POKE_TOOLS: ToolSpec[] = [
   {
     name: "calendar.list",
     description:
-      "Read upcoming calendar events from the user's Mac Calendar. days=1 is today. Use for schedule questions and to forecast what's coming up.",
+      "Read upcoming events from the user's Google Calendar (via OAuth). days=1 is today. Use for schedule questions and to forecast what's coming up. Optional accountId selects which connected Google account.",
     parameters: {
       type: "object",
-      properties: { days: { type: "number", description: "Days ahead, 1-14 (default 1)" } },
+      properties: {
+        days: { type: "number", description: "Days ahead, 1-30 (default 1)" },
+        accountId: { type: "string", description: "Optional Google account id; omit for default" },
+      },
+    },
+  },
+
+  // ---- Connections (auth to external services) ----
+  {
+    name: "connection.list",
+    description:
+      "List which external services can be connected and which accounts are already connected. Use before connection.request to check what's available.",
+    parameters: { type: "object", properties: {} },
+  },
+  {
+    name: "connection.connect",
+    description:
+      "Connect one of the user's external accounts (e.g. github, slack, notion, linear). OAuth providers open a browser sign-in; apikey providers take an apiKey. Tell the user to complete the browser approval when prompted.",
+    parameters: {
+      type: "object",
+      properties: {
+        provider: { type: "string", description: "Provider id, e.g. github, slack, notion" },
+        account: { type: "string", description: "A label for this account (e.g. an email)" },
+        apiKey: { type: "string", description: "For apikey providers only" },
+      },
+      required: ["provider"],
+    },
+  },
+  {
+    name: "connection.request",
+    description:
+      "Make an authenticated API call to a connected service. Use this to read or act on any connected provider (GitHub issues, Slack messages, Notion pages, etc.) without a dedicated tool. url may be a path relative to the provider's API base.",
+    parameters: {
+      type: "object",
+      properties: {
+        provider: { type: "string" },
+        account: { type: "string", description: "Optional; omit for the default account" },
+        method: { type: "string", description: "GET (default), POST, PATCH, DELETE..." },
+        url: { type: "string", description: "Absolute URL or path like /user/repos" },
+        query: { type: "object", description: "Optional query params" },
+        body: { type: "object", description: "Optional JSON body for writes" },
+      },
+      required: ["provider", "url"],
     },
   },
 
