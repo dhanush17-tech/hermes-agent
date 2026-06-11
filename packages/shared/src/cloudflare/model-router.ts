@@ -10,12 +10,24 @@ export type CloudflareModelRoutes = {
   hermes_providers?: Record<string, string>;
 };
 
+const DEFAULT_CLOUDFLARE_ROUTES: CloudflareModelRoutes = {
+  default: "@cf/zai-org/glm-4.7-flash",
+  routes: {},
+};
+
 export function loadCloudflareModelRoutes(configPath?: string): CloudflareModelRoutes {
   const root = process.env.HERMES_OS_ROOT ?? findWorkspaceRoot();
   const path = configPath ?? resolve(root, "configs/cloudflare-models.yaml");
-  const raw = parse(readFileSync(path, "utf8")) as CloudflareModelRoutes;
+  // Cloudflare is optional (vision/screen only, not the brain). A missing or
+  // unreadable config must never crash boot — fall back to defaults.
+  let raw: CloudflareModelRoutes;
+  try {
+    raw = parse(readFileSync(path, "utf8")) as CloudflareModelRoutes;
+  } catch {
+    return DEFAULT_CLOUDFLARE_ROUTES;
+  }
   return {
-    default: raw.default ?? "@cf/zai-org/glm-4.7-flash",
+    default: raw.default ?? DEFAULT_CLOUDFLARE_ROUTES.default,
     routes: raw.routes ?? {},
     hermes_providers: raw.hermes_providers,
   };
