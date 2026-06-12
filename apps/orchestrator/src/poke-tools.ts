@@ -234,13 +234,28 @@ export const POKE_TOOLS: ToolSpec[] = [
   {
     name: "code.self_edit",
     description:
-      "Edit your own source code to add a tool, fix a bug, or change behavior. Pass files:[{path, content}] with the COMPLETE new contents of each file (read it first). Reversible via code.rollback.",
+      "Edit your own source code to add a tool, fix a bug, or change behavior. PREFERRED: edits:[{path, find, replace}] — give the exact existing text to find and what to replace it with (read the file first to copy the text exactly). Use files:[{path, content}] only for brand-new files or full rewrites. Reversible via code.rollback. Always run code.run_tests after.",
     parameters: {
       type: "object",
       properties: {
         instruction: { type: "string", description: "What you're changing and why" },
+        edits: {
+          type: "array",
+          description: "Preferred: surgical find/replace edits to existing files.",
+          items: {
+            type: "object",
+            properties: {
+              path: { type: "string" },
+              find: { type: "string", description: "Exact existing text to replace" },
+              replace: { type: "string", description: "New text" },
+              replaceAll: { type: "boolean", description: "Replace every occurrence (default first)" },
+            },
+            required: ["path", "find", "replace"],
+          },
+        },
         files: {
           type: "array",
+          description: "For new files / full rewrites: complete file contents.",
           items: {
             type: "object",
             properties: { path: { type: "string" }, content: { type: "string" } },
@@ -248,7 +263,7 @@ export const POKE_TOOLS: ToolSpec[] = [
           },
         },
       },
-      required: ["instruction", "files"],
+      required: ["instruction"],
     },
   },
   {

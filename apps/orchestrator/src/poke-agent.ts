@@ -11,6 +11,13 @@ import { POKE_TOOLS } from "./poke-tools.js";
 
 const MAX_STEPS = 8;
 
+/** Coding / self-edit work needs the stronger model and a much bigger token budget. */
+function isCodingTask(text: string): boolean {
+  return /\b(code\.self_edit|self.?edit|edit (your|the|this) code|codebase|refactor|add a (new )?(tool|feature|provider|integration)|remove .*(from|out of) (the |your )?code|fix (the |this )?bug|implement|rewrite the)\b/i.test(
+    text,
+  );
+}
+
 const SYSTEM_PROMPT = `You are Poke — {USER}'s personal AI agent. You live on their Mac and act on their behalf.
 
 WHO YOU ARE
@@ -24,6 +31,11 @@ HARD RULES
 - Use what you already know (memory below) before asking. Save new durable facts with memory.remember.
 - If a tool returns status "denied" or "pending_approval", tell the user plainly. Otherwise, if a tool fails, try another path silently before surfacing a problem.
 - You can extend yourself: if you lack a capability, read the relevant file (filesystem.read) and use code.self_edit to add it.
+
+EDITING YOUR OWN CODE
+- When the user asks you to change/add/remove code, you MUST actually call code.self_edit. NEVER reply "done" unless code.self_edit returned status "success". Reading a file is not editing it.
+- Prefer surgical edits: code.self_edit { edits:[{path, find, replace}] } — give just the exact text to find and its replacement. Only use files:[{path, content}] for brand-new files or full rewrites.
+- After editing, run code.run_tests and report the checkpointId so the change can be rolled back.
 
 CAPABILITIES: read inbox (gmail.*), read calendar, search/read the live web, control the computer (screen.observe, browser.open, terminal.run), book rides (ride.uber/ride.lyft, prefilled — user confirms), draft & send email, remember things about the user, and ping the user proactively (message_user).
 
@@ -73,16 +85,23 @@ export async function runPokeAgent(
 
   const messages: ChatMessage[] = [...history, { role: "user", content: userMessage }];
 
+  // Escalate to the reasoning/coding model (+ big token budget) for code work.
+  // Either detected from the request, or once the agent actually touches code.* tools.
+  let coding = isCodingTask(userMessage);
+
   for (let step = 1; step <= MAX_STEPS; step++) {
     throwIfAborted(deps.signal);
 
+    const model = deps.model ?? (coding ? MODELS.reasoning : MODELS.primary);
+    const maxTokens = coding ? 8000 : 4000;
+
     const res = await chatWithTools({
-      model: deps.model ?? MODELS.primary,
+      model,
       system,
       messages,
       tools: POKE_TOOLS,
-      temperature: 0.4,
-      maxTokens: 1500,
+      temperature: coding ? 0.1 : 0.4,
+      maxTokens,
       signal: deps.signal,
     });
 
@@ -100,6 +119,7 @@ export async function runPokeAgent(
     let pendingApproval: string | null = null;
 
     for (const call of res.toolCalls) {
+      if (call.name.startsWith("code.") || call.name === "filesystem.write") coding = true;
       const result = await runToolCall(call, ctx, deps.executor);
       if (result.pendingApprovalMessage) pendingApproval = result.pendingApprovalMessage;
       messages.push({
