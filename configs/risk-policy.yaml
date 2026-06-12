@@ -4,6 +4,9 @@ tools:
   screen.observe:
     risk: read
     approval: false
+  screen.read:
+    risk: read
+    approval: false
   gmail.read:
     risk: read
     approval: false

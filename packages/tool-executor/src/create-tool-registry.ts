@@ -23,6 +23,7 @@ import {
 } from "./executors/connection-tools.js";
 import { executeRideUber, executeRideLyft } from "./executors/ride-deeplinks.js";
 import { executeScreenObserve } from "./executors/screen-observe.js";
+import { executeScreenRead } from "./executors/screen-read.js";
 import { executeBrowserGoto } from "./executors/browser-goto.js";
 import { executeBrowserFillCredentials } from "./executors/browser-fill-credentials.js";
 import { proposePatch, applyProposedPatch, rollbackCheckpoint, runWorkspaceTests } from "@hermes-os/code-tools";
@@ -140,6 +141,13 @@ export function createToolRegistry(deps: ToolRegistryDeps): ToolRegistryBundle {
     name: "screen.observe",
     async execute() {
       return executeScreenObserve(root);
+    },
+  });
+
+  registry.register({
+    name: "screen.read",
+    async execute(payload) {
+      return executeScreenRead(payload, root, deps.cf ?? null);
     },
   });
 
@@ -458,4 +466,3 @@ function htmlToText(html: string): string {
     .replace(/\n\s*\n\s*\n+/g, "\n\n")
     .trim();
 }
-

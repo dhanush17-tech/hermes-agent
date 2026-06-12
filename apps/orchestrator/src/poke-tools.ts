@@ -82,7 +82,7 @@ export const POKE_TOOLS: ToolSpec[] = [
   {
     name: "connection.connect",
     description:
-      "Connect one of the user's external accounts (e.g. github, slack, notion, linear). OAuth providers open a browser sign-in; apikey providers take an apiKey. Tell the user to complete the browser approval when prompted.",
+      "Connect one of the user's external accounts through an API connector (e.g. github, slack, notion, linear). OAuth providers require a configured OAuth client; apikey providers take an apiKey. If this fails because no OAuth client is configured, immediately use browser.goto for the service instead of telling the user you cannot help.",
     parameters: {
       type: "object",
       properties: {
@@ -159,15 +159,45 @@ export const POKE_TOOLS: ToolSpec[] = [
   // ---- Computer / desktop ----
   {
     name: "screen.observe",
-    description: "Take a screenshot of the user's screen and read what's on it. Use to see what the user is looking at.",
+    description:
+      "Take a screenshot of the user's screen and return the capture path only. This does not read text by itself; use screen.read when you need message contents.",
     parameters: { type: "object", properties: {} },
   },
   {
+    name: "screen.read",
+    description:
+      "Capture the user's current screen and use vision to read visible text. Use this before answering questions about Slack, DMs, channels, or any live app content shown in Arc/Chrome. If this fails, do not answer from memory.",
+    parameters: {
+      type: "object",
+      properties: {
+        service: { type: "string", description: "Visible app or service, e.g. slack" },
+        instruction: {
+          type: "string",
+          description: "What to read, e.g. latest visible messages in #visually",
+        },
+      },
+    },
+  },
+  {
     name: "browser.open",
-    description: "Open a URL in the user's browser.",
+    description:
+      "Open a URL in the Playwright-controlled browser. Do not use this for Google OAuth or Google login pages because Google may reject automation-controlled browsers as unsafe; use browser.goto instead.",
     parameters: {
       type: "object",
       properties: { url: { type: "string" } },
+      required: ["url"],
+    },
+  },
+  {
+    name: "browser.goto",
+    description:
+      "Open a URL in the user's normal macOS browser when HERMES_BROWSER_ENGINE=arc. Use this for OAuth, Google sign-in, Slack/Gmail/Calendar login, and any service auth flow that should happen in the user's trusted browser profile.",
+    parameters: {
+      type: "object",
+      properties: {
+        url: { type: "string" },
+        app: { type: "string", description: "Optional macOS browser app name, e.g. Arc or Google Chrome" },
+      },
       required: ["url"],
     },
   },
