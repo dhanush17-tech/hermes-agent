@@ -4,6 +4,9 @@ tools:
   screen.observe:
     risk: read
     approval: false
+  screen.read:
+    risk: read
+    approval: false
   gmail.read:
     risk: read
     approval: false
@@ -21,6 +24,18 @@ tools:
     approval: false
   calendar.list:
     risk: read
+    approval: false
+  connection.list:
+    risk: read
+    approval: false
+  connection.connect:
+    risk: medium
+    approval: false
+  connection.remove:
+    risk: medium
+    approval: false
+  connection.request:
+    risk: medium
     approval: false
   ride.uber:
     risk: low

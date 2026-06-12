@@ -3,7 +3,7 @@ default: "@cf/zai-org/glm-4.7-flash"
 
 routes:
   research: "@cf/openai/gpt-oss-20b"
-  coding: "@cf/qwen/qwen2.5-coder-32b-instruct"
+  coding: "@cf/moonshotai/kimi-k2.6"
   writing: "@cf/zai-org/glm-4.7-flash"
   personal_ops: "@cf/zai-org/glm-4.7-flash"
   laptop_control: "@cf/zai-org/glm-4.7-flash"
@@ -15,8 +15,9 @@ routes:
 # Screen vision (Gmail/X/LinkedIn presence scans) — Llama 3.2 Vision
 vision: "@cf/meta/llama-3.2-11b-vision-instruct"
 
-# Hermes named providers (use in chat: /model custom:cf-code:@cf/qwen/...)
+# Hermes named providers (use in chat: /model custom:cf-code:@cf/moonshotai/kimi-k2.6)
 hermes_providers:
   cf-fast: "@cf/zai-org/glm-4.7-flash"
-  cf-code: "@cf/qwen/qwen2.5-coder-32b-instruct"
+  cf-code: "@cf/moonshotai/kimi-k2.6"
+  cf-kimi: "@cf/moonshotai/kimi-k2.6"
   cf-reason: "@cf/openai/gpt-oss-20b"

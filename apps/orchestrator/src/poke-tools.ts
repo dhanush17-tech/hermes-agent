@@ -62,10 +62,52 @@ export const POKE_TOOLS: ToolSpec[] = [
   {
     name: "calendar.list",
     description:
-      "Read upcoming calendar events from the user's Mac Calendar. days=1 is today. Use for schedule questions and to forecast what's coming up.",
+      "Read upcoming events from the user's Google Calendar (via OAuth). days=1 is today. Use for schedule questions and to forecast what's coming up. Optional accountId selects which connected Google account.",
     parameters: {
       type: "object",
-      properties: { days: { type: "number", description: "Days ahead, 1-14 (default 1)" } },
+      properties: {
+        days: { type: "number", description: "Days ahead, 1-30 (default 1)" },
+        accountId: { type: "string", description: "Optional Google account id; omit for default" },
+      },
+    },
+  },
+
+  // ---- Connections (auth to external services) ----
+  {
+    name: "connection.list",
+    description:
+      "List which external services can be connected and which accounts are already connected. Use before connection.request to check what's available.",
+    parameters: { type: "object", properties: {} },
+  },
+  {
+    name: "connection.connect",
+    description:
+      "Connect one of the user's external accounts through an API connector (e.g. github, slack, notion, linear). OAuth providers require a configured OAuth client; apikey providers take an apiKey. If this fails because no OAuth client is configured, immediately use browser.goto for the service instead of telling the user you cannot help.",
+    parameters: {
+      type: "object",
+      properties: {
+        provider: { type: "string", description: "Provider id, e.g. github, slack, notion" },
+        account: { type: "string", description: "A label for this account (e.g. an email)" },
+        apiKey: { type: "string", description: "For apikey providers only" },
+      },
+      required: ["provider"],
+    },
+  },
+  {
+    name: "connection.request",
+    description:
+      "Make an authenticated API call to a connected service. Use this to read or act on any connected provider (GitHub issues, Slack messages, Notion pages, etc.) without a dedicated tool. url may be a path relative to the provider's API base.",
+    parameters: {
+      type: "object",
+      properties: {
+        provider: { type: "string" },
+        account: { type: "string", description: "Optional; omit for the default account" },
+        method: { type: "string", description: "GET (default), POST, PATCH, DELETE..." },
+        url: { type: "string", description: "Absolute URL or path like /user/repos" },
+        query: { type: "object", description: "Optional query params" },
+        body: { type: "object", description: "Optional JSON body for writes" },
+      },
+      required: ["provider", "url"],
     },
   },
 
@@ -117,15 +159,45 @@ export const POKE_TOOLS: ToolSpec[] = [
   // ---- Computer / desktop ----
   {
     name: "screen.observe",
-    description: "Take a screenshot of the user's screen and read what's on it. Use to see what the user is looking at.",
+    description:
+      "Take a screenshot of the user's screen and return the capture path only. This does not read text by itself; use screen.read when you need message contents.",
     parameters: { type: "object", properties: {} },
   },
   {
+    name: "screen.read",
+    description:
+      "Capture the user's current screen and use vision to read visible text. Use this before answering questions about Slack, DMs, channels, or any live app content shown in Arc/Chrome. If this fails, do not answer from memory.",
+    parameters: {
+      type: "object",
+      properties: {
+        service: { type: "string", description: "Visible app or service, e.g. slack" },
+        instruction: {
+          type: "string",
+          description: "What to read, e.g. latest visible messages in #visually",
+        },
+      },
+    },
+  },
+  {
     name: "browser.open",
-    description: "Open a URL in the user's browser.",
+    description:
+      "Open a URL in the Playwright-controlled browser. Do not use this for Google OAuth or Google login pages because Google may reject automation-controlled browsers as unsafe; use browser.goto instead.",
     parameters: {
       type: "object",
       properties: { url: { type: "string" } },
+      required: ["url"],
+    },
+  },
+  {
+    name: "browser.goto",
+    description:
+      "Open a URL in the user's normal macOS browser when HERMES_BROWSER_ENGINE=arc. Use this for OAuth, Google sign-in, Slack/Gmail/Calendar login, and any service auth flow that should happen in the user's trusted browser profile.",
+    parameters: {
+      type: "object",
+      properties: {
+        url: { type: "string" },
+        app: { type: "string", description: "Optional macOS browser app name, e.g. Arc or Google Chrome" },
+      },
       required: ["url"],
     },
   },
@@ -192,13 +264,28 @@ export const POKE_TOOLS: ToolSpec[] = [
   {
     name: "code.self_edit",
     description:
-      "Edit your own source code to add a tool, fix a bug, or change behavior. Pass files:[{path, content}] with the COMPLETE new contents of each file (read it first). Reversible via code.rollback.",
+      "Edit your own source code to add a tool, fix a bug, or change behavior. PREFERRED: edits:[{path, find, replace}] — give the exact existing text to find and what to replace it with (read the file first to copy the text exactly). Use files:[{path, content}] only for brand-new files or full rewrites. Reversible via code.rollback. Always run code.run_tests after.",
     parameters: {
       type: "object",
       properties: {
         instruction: { type: "string", description: "What you're changing and why" },
+        edits: {
+          type: "array",
+          description: "Preferred: surgical find/replace edits to existing files.",
+          items: {
+            type: "object",
+            properties: {
+              path: { type: "string" },
+              find: { type: "string", description: "Exact existing text to replace" },
+              replace: { type: "string", description: "New text" },
+              replaceAll: { type: "boolean", description: "Replace every occurrence (default first)" },
+            },
+            required: ["path", "find", "replace"],
+          },
+        },
         files: {
           type: "array",
+          description: "For new files / full rewrites: complete file contents.",
           items: {
             type: "object",
             properties: { path: { type: "string" }, content: { type: "string" } },
@@ -206,7 +293,7 @@ export const POKE_TOOLS: ToolSpec[] = [
           },
         },
       },
-      required: ["instruction", "files"],
+      required: ["instruction"],
     },
   },
   {

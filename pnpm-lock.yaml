@@ -317,6 +317,22 @@ importers:
         specifier: ^2.1.8
         version: 2.1.9(@types/node@22.19.19)
 
+  packages/connections:
+    dependencies:
+      '@hermes-os/shared':
+        specifier: workspace:*
+        version: link:../shared
+    devDependencies:
+      '@types/node':
+        specifier: ^22.10.2
+        version: 22.19.19
+      typescript:
+        specifier: 5.7.2
+        version: 5.7.2
+      vitest:
+        specifier: ^2.1.8
+        version: 2.1.9(@types/node@22.19.19)
+
   packages/connectors:
     dependencies:
       '@hermes-os/audit-log':
@@ -513,6 +529,9 @@ importers:
       '@hermes-os/code-tools':
         specifier: workspace:*
         version: link:../code-tools
+      '@hermes-os/connections':
+        specifier: workspace:*
+        version: link:../connections
       '@hermes-os/connectors':
         specifier: workspace:*
         version: link:../connectors

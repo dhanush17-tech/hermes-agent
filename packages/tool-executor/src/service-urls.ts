@@ -9,7 +9,7 @@ export const SERVICE_URLS: Record<string, string> = {
   twitter: "https://x.com",
   x: "https://x.com",
   linkedin: "https://www.linkedin.com/feed/",
-  slack: "https://slack.com/signin",
+  slack: "https://app.slack.com/client",
   notion: "https://www.notion.so",
   drive: "https://drive.google.com",
   amazon: "https://www.amazon.com",

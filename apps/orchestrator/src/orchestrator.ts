@@ -111,7 +111,6 @@ export class Orchestrator {
 
   private async tryDirectCommand(text: string): Promise<string | null> {
     const t = text.trim();
-    if (/^(daily|morning)\s+brief$/i.test(t)) return this.runMorningBrief();
     if (/^evening\s+review$/i.test(t)) return this.runEveningReview();
     if (/^(activity|logs|monitor)(\s+\d+)?$/i.test(t)) {
       const n = Number(t.match(/\d+/)?.[0] ?? 40);
@@ -130,13 +129,6 @@ export class Orchestrator {
 
   async getActivityLog(limit = 40): Promise<string> {
     return getActivityReport(this.auditRepo, limit);
-  }
-
-  async runMorningBrief(_userMessage = ""): Promise<string> {
-    return this.runProactive(
-      "Give me my morning brief: what's on my calendar today, anything urgent in my inbox, " +
-        "and one thing I should keep an eye on. Be concise.",
-    );
   }
 
   async runEveningReview(_userMessage = ""): Promise<string> {

@@ -1,3 +1,4 @@
+import { existsSync } from "node:fs";
 import type { ToolResult, ToolContext } from "@hermes-os/shared";
 import {
   createMultiAccountGmailFromEnv,
@@ -5,8 +6,12 @@ import {
 } from "@hermes-os/connectors";
 
 function resolveAccountId(body: { accountId?: string }): string | null {
+  if (body.accountId) return body.accountId;
   const accounts = loadGoogleAccountsFromEnv();
-  return body.accountId ?? accounts[0]?.id ?? null;
+  // Prefer the first account that actually has a token on disk, so an
+  // unauthorized account configured first doesn't become the silent default.
+  const authed = accounts.find((a) => a.tokenPath && existsSync(a.tokenPath));
+  return authed?.id ?? accounts[0]?.id ?? null;
 }
 
 export async function executeGmailSearch(payload: unknown): Promise<ToolResult> {

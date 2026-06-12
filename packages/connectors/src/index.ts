@@ -11,3 +11,5 @@ export * from "./calendar/index.js";
 export * from "./files/index.js";
 export * from "./github/github-connector.js";
 export * from "./google/google-auth.js";
+export * from "./google/google-account-token.js";
+export * from "./google/google-calendar.js";

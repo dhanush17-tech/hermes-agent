@@ -87,6 +87,17 @@ type WireMessage = {
   name?: string;
 };
 
+// Anthropic (and some others) require tool names to match ^[a-zA-Z0-9_-]+$ — no
+// dots. Our tools use dotted names (gmail.check_inbox, code.self_edit). Map dots
+// to "__" on the wire and back when reading responses, so names work on every
+// provider without renaming the tool registry.
+function wireName(name: string): string {
+  return name.replaceAll(".", "__");
+}
+export function realToolName(name: string): string {
+  return name.replaceAll("__", ".");
+}
+
 function toWire(messages: ChatMessage[]): WireMessage[] {
   return messages.map((m) => {
     const wire: WireMessage = { role: m.role, content: m.content };
@@ -94,11 +105,11 @@ function toWire(messages: ChatMessage[]): WireMessage[] {
       wire.tool_calls = m.toolCalls.map((t) => ({
         id: t.id,
         type: "function",
-        function: { name: t.name, arguments: t.arguments },
+        function: { name: wireName(t.name), arguments: t.arguments },
       }));
     }
     if (m.toolCallId) wire.tool_call_id = m.toolCallId;
-    if (m.name) wire.name = m.name;
+    if (m.name) wire.name = wireName(m.name);
     return wire;
   });
 }
@@ -160,7 +171,7 @@ export async function chatWithTools(input: ChatInput): Promise<ChatResult> {
   if (input.tools?.length) {
     body.tools = input.tools.map((t) => ({
       type: "function",
-      function: { name: t.name, description: t.description, parameters: t.parameters },
+      function: { name: wireName(t.name), description: t.description, parameters: t.parameters },
     }));
     body.tool_choice = input.toolChoice ?? "auto";
   }
@@ -195,7 +206,7 @@ export async function chatWithTools(input: ChatInput): Promise<ChatResult> {
     .filter((c) => c.function?.name)
     .map((c, i) => ({
       id: c.id ?? `call_${i}`,
-      name: c.function!.name!,
+      name: realToolName(c.function!.name!),
       arguments: c.function!.arguments ?? "{}",
     }));
 
