@@ -14,6 +14,46 @@ function toolRequestKey(req: ToolRequest): string {
   return `${req.tool}:${JSON.stringify(req.payload ?? {})}`;
 }
 
+function payloadInstruction(payload: unknown): string {
+  if (typeof payload === "string") return payload.trim();
+  if (!payload || typeof payload !== "object") return "";
+  const body = payload as {
+    instruction?: unknown;
+    request?: unknown;
+    prompt?: unknown;
+    task?: unknown;
+  };
+  for (const value of [body.instruction, body.request, body.prompt, body.task]) {
+    if (typeof value === "string" && value.trim()) return value.trim();
+  }
+  return "";
+}
+
+function looksLikeEditInstruction(text: string | undefined): text is string {
+  if (!text?.trim()) return false;
+  return /\b(fix|implement|change|update|modify|edit|patch|refactor|debug|build|test|add|remove)\b/i.test(text);
+}
+
+function normalizeCodeSelfEditPayload(
+  payload: unknown,
+  req: ToolRequest,
+  userMessage: string | undefined,
+): unknown {
+  if (payloadInstruction(payload)) return payload;
+
+  const fallback = looksLikeEditInstruction(req.reason)
+    ? req.reason.trim()
+    : looksLikeEditInstruction(userMessage)
+      ? userMessage.trim()
+      : "";
+
+  if (!fallback) return payload;
+  if (!payload || typeof payload !== "object" || Array.isArray(payload)) {
+    return { instruction: fallback };
+  }
+  return { ...(payload as Record<string, unknown>), instruction: fallback };
+}
+
 export function dedupeToolRequests(requests: ToolRequest[], maxPerRound = 2): ToolRequest[] {
   const seen = new Set<string>();
   const out: ToolRequest[] = [];
@@ -39,7 +79,7 @@ export async function executeAgentToolRequests(
   let hadToolFailures = false;
 
   for (const req of deduped) {
-    let payload = req.payload ?? {};
+    let payload: unknown = req.payload ?? {};
 
     if (req.tool === "web.fetch") {
       const normalized = normalizeWebFetchPayload(
@@ -55,6 +95,10 @@ export async function executeAgentToolRequests(
         continue;
       }
       payload = { url: normalized.url };
+    }
+
+    if (req.tool === "code.self_edit") {
+      payload = normalizeCodeSelfEditPayload(payload, req, opts.userMessage);
     }
 
     const result = await executor.invoke(req.tool, payload, ctx, {

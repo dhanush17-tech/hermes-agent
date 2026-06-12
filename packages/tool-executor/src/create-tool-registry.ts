@@ -480,7 +480,7 @@ export function createToolRegistry(deps: ToolRegistryDeps): ToolRegistryBundle {
   registry.register({
     name: "code.self_edit",
     async execute(payload) {
-      return executeCodeSelfEdit(payload, root);
+      return executeCodeSelfEdit(payload, root, null);
     },
   });
 
@@ -501,7 +501,7 @@ export function createToolRegistry(deps: ToolRegistryDeps): ToolRegistryBundle {
   registry.register({
     name: "tools.author",
     async execute(payload) {
-      return executeToolsAuthor(payload, macros, registry.listNames());
+      return executeToolsAuthor(payload, macros, null, registry.listNames());
     },
   });
 
@@ -570,4 +570,3 @@ export function createToolRegistry(deps: ToolRegistryDeps): ToolRegistryBundle {
 
   return { registry, macros, skills };
 }
-

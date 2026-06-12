@@ -10,11 +10,13 @@ const root = resolve(import.meta.dirname, "..");
 
 const ORDER = [
   "packages/shared",
+  "packages/llm-client",
   "packages/agent-runtime",
   "packages/policies",
   "packages/context-graph",
   "packages/audit-log",
   "packages/approval-broker",
+  "packages/credentials",
   "packages/risk-engine",
   "packages/memory",
   "packages/notification-center",
@@ -24,11 +26,13 @@ const ORDER = [
   "packages/connectors",
   "packages/research",
   "packages/workflows",
+  "packages/recommendations",
+  "packages/skills",
   "packages/tool-executor",
   "apps/orchestrator",
   "apps/chat-server",
-  "apps/daemon",
   "apps/imessage-bridge",
+  "apps/daemon",
   "src",
 ];
 

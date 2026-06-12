@@ -110,8 +110,8 @@ tools:
     risk: high
     approval: always
   code.self_edit:
-    risk: high
-    approval: always
+    risk: medium
+    approval: false
   code.propose_patch:
     risk: low
     approval: false

@@ -6,6 +6,7 @@ import { findWorkspaceRoot } from "@hermes-os/shared";
 import {
   checkMessagesDbAccess,
   CHAT_DB_FDA_INSTRUCTIONS,
+  fetchLatestMessageRowId,
   fetchMessagesSince,
   type IncomingChatMessage,
 } from "./chat-db.js";
@@ -16,6 +17,8 @@ import { formatParsedForOrchestrator, parseIncomingMessage } from "./incoming-pa
 
 const execFileAsync = promisify(execFile);
 const CHAT_DB_RETRY_MS = Number(process.env.IMESSAGE_CHAT_DB_RETRY_MS ?? 300_000);
+const PROCESS_BACKLOG = process.env.IMESSAGE_PROCESS_BACKLOG === "1";
+const NOTIFY_BLOCKED_VIA_IMESSAGE = process.env.IMESSAGE_NOTIFY_ON_BLOCKED === "1";
 
 export type IMessageBridgeOptions = {
   pollIntervalMs?: number;
@@ -81,6 +84,7 @@ export class IMessageBridge {
       await this.onChatDbBlocked(initial.status, initial.message);
     } else {
       this.db = initial.db;
+      this.skipBacklog(initial.db);
     }
 
     if (this.approved.size === 0) {
@@ -104,6 +108,7 @@ export class IMessageBridge {
     const access = checkMessagesDbAccess();
     if (access.status === "ok") {
       this.db = access.db;
+      this.skipBacklog(access.db);
       this.chatState = "ready";
       this.userNotified = false;
       return true;
@@ -134,7 +139,7 @@ export class IMessageBridge {
     );
 
     const recipient = process.env.IMESSAGE_DEFAULT_RECIPIENT?.trim();
-    if (recipient) {
+    if (recipient && NOTIFY_BLOCKED_VIA_IMESSAGE) {
       const ping = [
         "[Hermes] Paused — I cannot read iMessage (chat.db blocked).",
         "",
@@ -150,6 +155,10 @@ export class IMessageBridge {
       if (sent === "sent") {
         console.log(`Notified ${recipient} via iMessage (one-time). Bridge paused — no more spam.`);
       }
+    } else if (recipient) {
+      console.warn(
+        "Skipped iMessage blocked-access alert. Set IMESSAGE_NOTIFY_ON_BLOCKED=1 to opt in.",
+      );
     } else {
       console.warn(
         "Set IMESSAGE_DEFAULT_RECIPIENT in .env for a one-time iMessage alert when chat.db is blocked.",
@@ -164,6 +173,15 @@ export class IMessageBridge {
       /* ok */
     }
     this.db = null;
+  }
+
+  private skipBacklog(db: Database.Database): void {
+    if (PROCESS_BACKLOG) return;
+    const latest = fetchLatestMessageRowId(db);
+    if (latest > this.lastRowId) {
+      this.lastRowId = latest;
+      console.log(`iMessage bridge starting after row ${latest} (old backlog skipped).`);
+    }
   }
 
   private async handleIncoming(msg: IncomingChatMessage): Promise<void> {

@@ -97,7 +97,7 @@ export class LaptopControlAgent {
 
         const capturePath = afterNav.path ?? before.path;
         if (capturePath) {
-          const login = await analyzeScreenForLogin(capturePath, url);
+          const login = await analyzeScreenForLogin(capturePath, url, null);
           if (login.loginRequired) {
             const service = login.service ?? this.inferServiceLabel(url);
             const session: PendingLoginSession = {

@@ -170,21 +170,27 @@ importers:
 
   apps/orchestrator:
     dependencies:
-      '@hermes-os/agent-runtime':
-        specifier: workspace:*
-        version: link:../../packages/agent-runtime
       '@hermes-os/approval-broker':
         specifier: workspace:*
         version: link:../../packages/approval-broker
       '@hermes-os/audit-log':
         specifier: workspace:*
         version: link:../../packages/audit-log
+      '@hermes-os/browser-control':
+        specifier: workspace:*
+        version: link:../../packages/browser-control
       '@hermes-os/connectors':
         specifier: workspace:*
         version: link:../../packages/connectors
       '@hermes-os/context-graph':
         specifier: workspace:*
         version: link:../../packages/context-graph
+      '@hermes-os/credentials':
+        specifier: workspace:*
+        version: link:../../packages/credentials
+      '@hermes-os/llm-client':
+        specifier: workspace:*
+        version: link:../../packages/llm-client
       '@hermes-os/memory':
         specifier: workspace:*
         version: link:../../packages/memory
@@ -194,6 +200,9 @@ importers:
       '@hermes-os/policies':
         specifier: workspace:*
         version: link:../../packages/policies
+      '@hermes-os/recommendations':
+        specifier: workspace:*
+        version: link:../../packages/recommendations
       '@hermes-os/research':
         specifier: workspace:*
         version: link:../../packages/research
@@ -203,6 +212,9 @@ importers:
       '@hermes-os/shared':
         specifier: workspace:*
         version: link:../../packages/shared
+      '@hermes-os/skills':
+        specifier: workspace:*
+        version: link:../../packages/skills
       '@hermes-os/tool-executor':
         specifier: workspace:*
         version: link:../../packages/tool-executor
@@ -401,11 +413,52 @@ importers:
         specifier: ^2.1.8
         version: 2.1.9(@types/node@22.19.19)
 
+  packages/credentials:
+    dependencies:
+      zod:
+        specifier: ^3.24.1
+        version: 3.25.76
+    devDependencies:
+      '@types/node':
+        specifier: ^22.10.2
+        version: 22.19.19
+      typescript:
+        specifier: 5.7.2
+        version: 5.7.2
+      vitest:
+        specifier: ^2.1.8
+        version: 2.1.9(@types/node@22.19.19)
+
+  packages/llm-client:
+    dependencies:
+      zod:
+        specifier: ^3.24.1
+        version: 3.25.76
+    devDependencies:
+      '@types/json-schema':
+        specifier: ^7.0.15
+        version: 7.0.15
+      '@types/node':
+        specifier: ^22.10.2
+        version: 22.19.19
+      typescript:
+        specifier: 5.7.2
+        version: 5.7.2
+      vitest:
+        specifier: ^2.1.8
+        version: 2.1.9(@types/node@22.19.19)
+
   packages/memory:
     dependencies:
       '@hermes-os/context-graph':
         specifier: workspace:*
         version: link:../context-graph
+      '@hermes-os/credentials':
+        specifier: workspace:*
+        version: link:../credentials
+      '@hermes-os/llm-client':
+        specifier: workspace:*
+        version: link:../llm-client
       '@hermes-os/shared':
         specifier: workspace:*
         version: link:../shared
@@ -467,14 +520,48 @@ importers:
         specifier: ^2.1.8
         version: 2.1.9(@types/node@22.19.19)
 
+  packages/recommendations:
+    dependencies:
+      '@hermes-os/browser-control':
+        specifier: workspace:*
+        version: link:../browser-control
+      '@hermes-os/memory':
+        specifier: workspace:*
+        version: link:../memory
+      '@hermes-os/research':
+        specifier: workspace:*
+        version: link:../research
+      '@hermes-os/shared':
+        specifier: workspace:*
+        version: link:../shared
+      '@hermes-os/workflows':
+        specifier: workspace:*
+        version: link:../workflows
+    devDependencies:
+      '@types/node':
+        specifier: ^22.10.2
+        version: 22.19.19
+      typescript:
+        specifier: 5.7.2
+        version: 5.7.2
+      vitest:
+        specifier: ^2.1.8
+        version: 2.1.9(@types/node@22.19.19)
+
   packages/research:
     dependencies:
+      '@hermes-os/browser-control':
+        specifier: workspace:*
+        version: link:../browser-control
       '@hermes-os/connectors':
         specifier: workspace:*
         version: link:../connectors
       '@hermes-os/context-graph':
         specifier: workspace:*
         version: link:../context-graph
+      '@hermes-os/llm-client':
+        specifier: workspace:*
+        version: link:../llm-client
       '@hermes-os/memory':
         specifier: workspace:*
         version: link:../memory
@@ -530,6 +617,34 @@ importers:
         specifier: ^2.1.8
         version: 2.1.9(@types/node@22.19.19)
 
+  packages/skills:
+    dependencies:
+      '@hermes-os/context-graph':
+        specifier: workspace:*
+        version: link:../context-graph
+      '@hermes-os/llm-client':
+        specifier: workspace:*
+        version: link:../llm-client
+      '@hermes-os/memory':
+        specifier: workspace:*
+        version: link:../memory
+      '@hermes-os/shared':
+        specifier: workspace:*
+        version: link:../shared
+      zod:
+        specifier: ^3.24.1
+        version: 3.25.76
+    devDependencies:
+      '@types/node':
+        specifier: ^22.10.2
+        version: 22.19.19
+      typescript:
+        specifier: 5.7.2
+        version: 5.7.2
+      vitest:
+        specifier: ^2.1.8
+        version: 2.1.9(@types/node@22.19.19)
+
   packages/tool-executor:
     dependencies:
       '@hermes-os/approval-broker':
@@ -550,6 +665,12 @@ importers:
       '@hermes-os/connectors':
         specifier: workspace:*
         version: link:../connectors
+      '@hermes-os/credentials':
+        specifier: workspace:*
+        version: link:../credentials
+      '@hermes-os/llm-client':
+        specifier: workspace:*
+        version: link:../llm-client
       '@hermes-os/memory':
         specifier: workspace:*
         version: link:../memory
@@ -559,6 +680,9 @@ importers:
       '@hermes-os/shared':
         specifier: workspace:*
         version: link:../shared
+      '@hermes-os/skills':
+        specifier: workspace:*
+        version: link:../skills
     devDependencies:
       '@hermes-os/context-graph':
         specifier: workspace:*
@@ -1092,6 +1216,9 @@ packages:
 
   '@types/estree@1.0.9':
     resolution: {integrity: sha512-GhdPgy1el4/ImP05X05Uw4cw2/M93BCUmnEvWZNStlCzEKME4Fkk+YpoA5OiHNQmoS7Cafb8Xa3Pya8m1Qrzeg==}
+
+  '@types/json-schema@7.0.15':
+    resolution: {integrity: sha512-5+fP8P8MFNC+AyZCDxrB2pkZFPGzqQWUzpSeuuVLvm8VMcorNYavBqoFcxK8bQz4Qsbn4oUEEem4wDLfcysGHA==}
 
   '@types/node-fetch@2.6.13':
     resolution: {integrity: sha512-QGpRVpzSaUs30JBSGPjOg4Uveu384erbHBoT1zeONvyCfwQxIkUshLAOqN/k9EjGviPRmWTTe6aH2qySWKTVSw==}
@@ -2756,6 +2883,8 @@ snapshots:
     optional: true
 
   '@types/estree@1.0.9': {}
+
+  '@types/json-schema@7.0.15': {}
 
   '@types/node-fetch@2.6.13':
     dependencies:

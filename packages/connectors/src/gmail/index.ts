@@ -3,6 +3,8 @@ export * from "./gmail-api-connector.js";
 export * from "./gmail-connector.js";
 export * from "./gmail-auth.js";
 export * from "./gmail-api.js";
+export * from "./gmail-token.js";
+export * from "./gmail-access-resolver.js";
 export * from "./gmail-search.js";
 export * from "./gmail-thread.js";
 export * from "./gmail-drafts.js";

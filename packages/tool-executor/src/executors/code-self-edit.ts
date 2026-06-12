@@ -4,17 +4,38 @@ import type { HermesModelProvider, ToolResult } from "@hermes-os/shared";
 
 export type CodeSelfEditPayload = {
   instruction?: string;
+  request?: string;
+  prompt?: string;
+  task?: string;
   scope?: string;
 };
+
+function extractInstruction(payload: unknown): string {
+  if (typeof payload === "string") return payload.trim();
+  if (!payload || typeof payload !== "object") return "";
+
+  const body = payload as CodeSelfEditPayload;
+  return (
+    body.instruction?.trim() ??
+    body.request?.trim() ??
+    body.prompt?.trim() ??
+    body.task?.trim() ??
+    ""
+  );
+}
 
 export async function executeCodeSelfEdit(
   payload: unknown,
   workspaceRoot: string,
   hermes: HermesModelProvider | null,
 ): Promise<ToolResult> {
-  const body = payload as CodeSelfEditPayload;
-  const instruction = body.instruction?.trim();
-  if (!instruction) return { status: "denied", reason: "instruction required" };
+  const instruction = extractInstruction(payload);
+  if (!instruction) {
+    return {
+      status: "denied",
+      reason: "code.self_edit requires an edit instruction",
+    };
+  }
 
   if (hermes && (await hermes.healthCheck())) {
     try {

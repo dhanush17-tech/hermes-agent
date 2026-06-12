@@ -17,8 +17,10 @@
     "lint": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
+    "@hermes-os/browser-control": "workspace:*",
     "@hermes-os/connectors": "workspace:*",
     "@hermes-os/context-graph": "workspace:*",
+    "@hermes-os/llm-client": "workspace:*",
     "@hermes-os/memory": "workspace:*",
     "@hermes-os/shared": "workspace:*"
   },

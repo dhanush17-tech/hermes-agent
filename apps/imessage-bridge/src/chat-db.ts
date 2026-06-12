@@ -110,6 +110,13 @@ export function fetchMessagesSince(
     .filter((m): m is IncomingChatMessage => m !== null);
 }
 
+export function fetchLatestMessageRowId(db: Database.Database): number {
+  const row = db.prepare("SELECT COALESCE(MAX(ROWID), 0) as rowid FROM message").get() as
+    | { rowid?: number }
+    | undefined;
+  return Number(row?.rowid ?? 0);
+}
+
 function normalizeMessageText(raw: unknown): string | null {
   if (typeof raw === "string") {
     const t = raw.trim();

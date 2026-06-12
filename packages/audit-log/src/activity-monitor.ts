@@ -82,6 +82,8 @@ export class ActivityMonitor {
       tool?: string;
       status?: string;
       detail?: string;
+      category?: string;
+      validatorStatus?: string;
     },
   ): Promise<void> {
     await this.record("agent_step", {
