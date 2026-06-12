@@ -123,24 +123,6 @@ export function startProactiveScheduler(deps: {
         }
       }
 
-      if (now.getHours() === morningHour && lastMorningDate !== dateKey) {
-        lastMorningDate = dateKey;
-        const brief = await deps.orchestrator.runMorningBrief();
-        await dispatchNotification({
-          type: "brief",
-          title: "Morning brief",
-          body: brief.slice(0, 1200),
-          score: 75,
-          dedupeKey: `brief:morning:${dateKey}`,
-          priority: "medium",
-        });
-        await deps.audit.log({
-          eventType: "proactive_notification_sent",
-          actor: "system",
-          payload: { type: "morning_brief" },
-        });
-      }
-
       // Late-night wellbeing: only nudge if the user is actually up and active.
       const hour = now.getHours();
       const inLateWindow =
